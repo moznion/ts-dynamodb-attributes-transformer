@@ -1,0 +1,30 @@
+{
+  "name": "ts-dynamodb-attributes-transformer",
+  "version": "0.0.1",
+  "description": "TypeScript Compiler API Transformer for Amazon DynamoDB attributes",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moznion/ts-dynamodb-attributes-transformer.git"
+  },
+  "keywords": [
+    "DynamoDB",
+    "Transformer"
+  ],
+  "author": {
+    "name": "moznion",
+    "email": "moznion@mail.moznion.net"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moznion/ts-dynamodb-attributes-transformer/issues"
+  },
+  "homepage": "https://github.com/moznion/ts-dynamodb-attributes-transformer#readme",
+  "devDependencies": {
+    "ttypescript": "^1.5.13",
+    "typescript": "^4.8.4"
+  }
+}
