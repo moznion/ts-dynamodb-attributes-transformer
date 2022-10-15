@@ -53,7 +53,11 @@ export class ArrayField implements DynamodbItemField {
 }
 
 export class SetField implements DynamodbItemField {
-  constructor(readonly fieldName: string, readonly valueType: DynamodbPrimitiveTypes) {}
+  constructor(
+    readonly fieldName: string,
+    readonly valueType: DynamodbPrimitiveTypes,
+    readonly shouldLenientTypeCheck: boolean,
+  ) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
     if (
@@ -61,7 +65,10 @@ export class SetField implements DynamodbItemField {
       this.valueType !== DynamodbPrimitiveTypes.Number &&
       this.valueType !== DynamodbPrimitiveTypes.Binary
     ) {
-      return undefined;
+      if (this.shouldLenientTypeCheck) {
+        return undefined;
+      }
+      throw new Error(`a type parameter of the Set type property "${this.fieldName}" is unsupported one`);
     }
     const mapToStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.map(v => `${v}`)' : '';
 
@@ -85,12 +92,15 @@ export class MapField implements DynamodbItemField {
     readonly fieldName: string,
     readonly keyValueType: DynamodbPrimitiveTypes,
     readonly valueType: DynamodbPrimitiveTypes,
+    readonly shouldLenientTypeCheck: boolean,
   ) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
     if (this.keyValueType !== DynamodbPrimitiveTypes.String) {
-      // TODO
-      return undefined;
+      if (this.shouldLenientTypeCheck) {
+        return undefined;
+      }
+      throw new Error(`a Map type property "${this.fieldName}" has non-string key type`);
     }
 
     const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';
@@ -146,12 +156,15 @@ export class KeyValuePairMapField implements DynamodbItemField {
     readonly fieldName: string,
     readonly keyValueType: DynamodbPrimitiveTypes,
     readonly valueType: DynamodbPrimitiveTypes,
+    readonly shouldLenientTypeCheck: boolean,
   ) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
     if (this.keyValueType !== DynamodbPrimitiveTypes.String) {
-      // TODO
-      return undefined;
+      if (this.shouldLenientTypeCheck) {
+        return undefined;
+      }
+      throw new Error(`a Map type property "${this.fieldName}" has non-string key type`);
     }
 
     const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';

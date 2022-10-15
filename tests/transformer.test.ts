@@ -206,4 +206,35 @@ describe('dynamodb record transform', () => {
     const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar'));
     expect(Object.keys(record)).toHaveLength(0);
   });
+
+  test('ignore unsupported types', () => {
+    class Clazz {
+      constructor(
+        readonly regex: RegExp,
+        readonly regexArray: RegExp[],
+        readonly regexSet: Set<RegExp>,
+        readonly regexMap: Map<string, RegExp>,
+        readonly nonStrKeyMap: Map<number, number>,
+        readonly unsupportedTypeKeyMap: Map<symbol, string>,
+        readonly regexKVMap: { [key: string]: RegExp },
+        readonly nonStrKeyKVMap: { [key: number]: number },
+        readonly unsupportedTypeKeyKVMap: { [key: symbol]: string },
+      ) {}
+    }
+
+    const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(
+      new Clazz(
+        /re/,
+        [/re/],
+        new Set([/re/]),
+        new Map([['re', /re/]]),
+        new Map([[123, 321]]),
+        new Map([[Symbol('symbol'), 'foo']]),
+        { re: /re/ },
+        { 123: 321 },
+        {},
+      ),
+    );
+    expect(Object.keys(record)).toHaveLength(0);
+  });
 });

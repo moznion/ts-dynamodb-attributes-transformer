@@ -18,6 +18,9 @@ export default function transformer(program: ts.Program): ts.TransformerFactory<
   return (context: ts.TransformationContext) => (file: ts.SourceFile) => visitNodeAndChildren(file, program, context);
 }
 
+const dynamodbRecordFuncName = 'dynamodbRecord';
+const shouldLenientTypeCheck = !!process.env['TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK'];
+
 function visitNodeAndChildren(
   node: ts.SourceFile,
   program: ts.Program,
@@ -54,11 +57,15 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
   }
 
   if (node.typeArguments === undefined || node.typeArguments.length !== 1 || !node.typeArguments[0]) {
-    throw new Error('TODO');
+    throw new Error(`No type argument on ${dynamodbRecordFuncName}(). Please put a type argument on the function`);
   }
 
+  const typeName = node.typeArguments[0].getText();
+
   if (node.arguments.length !== 1 || !node.arguments[0]) {
-    throw new Error('TODO');
+    throw new Error(
+      `No argument on ${dynamodbRecordFuncName}(). Please put an argument that has ${typeName} type on the function`,
+    );
   }
 
   const argVarNameIdent = ts.factory.createIdentifier('arg');
@@ -75,11 +82,16 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         return undefined;
       }
 
-      if (prop.valueDeclaration.kind !== ts.SyntaxKind.Parameter) {
-        return undefined;
-      }
-
       const propName = prop.name;
+
+      if (prop.valueDeclaration.kind !== ts.SyntaxKind.Parameter) {
+        if (shouldLenientTypeCheck) {
+          return undefined;
+        }
+        throw new Error(
+          `unexpected error: a property "${propName}" of the type "${typeName}" doesn't have parameter kind`,
+        );
+      }
 
       const valueDeclSymbol = typeChecker.getTypeAtLocation(prop.valueDeclaration).symbol;
       const valueDeclSymbolName = valueDeclSymbol?.name;
@@ -94,8 +106,10 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
             return new ArrayField(propName, DynamodbPrimitiveTypes.Binary);
           }
 
-          // TODO
-          return undefined;
+          if (shouldLenientTypeCheck) {
+            return undefined;
+          }
+          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
         }
         return new ArrayField(propName, valueType);
       }
@@ -106,13 +120,15 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         const valueType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[0]?.flags);
         if (valueType === undefined) {
           if (typeArgs[0]?.symbol?.name === 'Uint8Array') {
-            return new SetField(propName, DynamodbPrimitiveTypes.Binary);
+            return new SetField(propName, DynamodbPrimitiveTypes.Binary, shouldLenientTypeCheck);
           }
 
-          // TODO
-          return undefined;
+          if (shouldLenientTypeCheck) {
+            return undefined;
+          }
+          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
         }
-        return new SetField(propName, valueType);
+        return new SetField(propName, valueType, shouldLenientTypeCheck);
       }
       if (valueDeclSymbolName == 'Map') {
         const typeArgs = typeChecker.getTypeArguments(
@@ -121,21 +137,25 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
 
         const keyType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[0]?.flags);
         if (keyType === undefined) {
-          // TODO
-          return undefined;
+          if (shouldLenientTypeCheck) {
+            return undefined;
+          }
+          throw new Error(`a Map type property "${propName}" of the type "${typeName}" has non-string key type`);
         }
 
         const valueType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[1]?.flags);
         if (valueType === undefined) {
           if (typeArgs[1]?.symbol?.name === 'Uint8Array') {
-            return new MapField(propName, keyType, DynamodbPrimitiveTypes.Binary);
+            return new MapField(propName, keyType, DynamodbPrimitiveTypes.Binary, shouldLenientTypeCheck);
           }
 
-          // TODO
-          return undefined;
+          if (shouldLenientTypeCheck) {
+            return undefined;
+          }
+          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
         }
 
-        return new MapField(propName, keyType, valueType);
+        return new MapField(propName, keyType, valueType, shouldLenientTypeCheck);
       }
       if ((valueDeclSymbol?.flags & ts.SymbolFlags.TypeLiteral) === ts.SymbolFlags.TypeLiteral) {
         // for key-value pair map notation
@@ -143,16 +163,20 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
 
         const keyType = dynamodbPrimitiveTypeFromName(kvType?.[0]);
         if (keyType === undefined) {
-          // TODO
-          return undefined;
+          if (shouldLenientTypeCheck) {
+            return undefined;
+          }
+          throw new Error(`a Map type property "${propName}" of the type "${typeName}" has non-string key type`);
         }
         const valueType = dynamodbPrimitiveTypeFromName(kvType?.[1]);
         if (valueType === undefined) {
-          // TODO
-          return undefined;
+          if (shouldLenientTypeCheck) {
+            return undefined;
+          }
+          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
         }
 
-        return new KeyValuePairMapField(propName, keyType, valueType);
+        return new KeyValuePairMapField(propName, keyType, valueType, shouldLenientTypeCheck);
       }
 
       if (valueDeclSymbolName === 'Uint8Array') {
@@ -165,15 +189,22 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         if (colonTokenCame) {
           const fieldType = dynamodbPrimitiveTypeFromName(propNode.getText());
           if (fieldType === undefined) {
-            // TODO
-            return undefined;
+            if (shouldLenientTypeCheck) {
+              return undefined;
+            }
+            throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
           }
           return new PrimitiveField(propName, fieldType);
         }
         colonTokenCame = propNode.kind == ts.SyntaxKind.ColonToken;
       }
 
-      return undefined;
+      // should never reach here
+
+      if (shouldLenientTypeCheck) {
+        return undefined;
+      }
+      throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
     })
     .map(field => {
       return field?.generateCode(argVarNameIdent.text);
@@ -242,7 +273,7 @@ function isDynamodbRecordCallExpression(node: ts.Node, typeChecker: ts.TypeCheck
     return false;
   }
   const declaration = typeChecker.getResolvedSignature(node)?.declaration;
-  if (!declaration || ts.isJSDocSignature(declaration) || declaration.name?.getText() !== 'dynamodbRecord') {
+  if (!declaration || ts.isJSDocSignature(declaration) || declaration.name?.getText() !== dynamodbRecordFuncName) {
     return false;
   }
   try {
