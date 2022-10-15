@@ -97,9 +97,7 @@ describe('dynamodb record transform', () => {
     expect(record['bytesSet']).toEqual({ BS: [new TextEncoder().encode('set'), new TextEncoder().encode('bytes')] });
     expect(record['mapToNum']).toEqual({
       M: {
-        mapTo: {
-          N: '123',
-        },
+        mapTo: { N: '123' },
         num: {
           N: '234',
         },
@@ -236,5 +234,35 @@ describe('dynamodb record transform', () => {
       ),
     );
     expect(Object.keys(record)).toHaveLength(0);
+  });
+
+  test('support BigInt', () => {
+    class Clazz {
+      constructor(
+        readonly bigint: BigInt,
+        readonly bigintSlice: BigInt[],
+        readonly bigintArray: Array<BigInt>,
+        readonly bigintSet: Set<BigInt>,
+        readonly mapToBigint: Map<string, BigInt>,
+        readonly kvMapToBigint: { [key: string]: BigInt },
+      ) {}
+    }
+    const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(
+      new Clazz(
+        BigInt(123),
+        [BigInt(123), BigInt(234)],
+        new Array<BigInt>(BigInt(345), BigInt(456)),
+        new Set([BigInt(567), BigInt(678)]),
+        new Map([['bigint', BigInt(789)]]),
+        { bigint: BigInt(890) },
+      ),
+    );
+    expect(record['bigint']).toEqual({ N: '123' });
+    expect(record['bigintSlice']).toEqual({ L: [{ N: '123' }, { N: '234' }] });
+    expect(record['bigintArray']).toEqual({ L: [{ N: '345' }, { N: '456' }] });
+    expect(record['bigintSet']).toEqual({ NS: ['567', '678'] });
+    expect(record['mapToBigint']).toEqual({ M: { bigint: { N: '789' } } });
+    expect(record['kvMapToBigint']).toEqual({ M: { bigint: { N: '890' } } });
+    expect(Object.keys(record)).toHaveLength(6);
   });
 });

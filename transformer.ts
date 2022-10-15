@@ -102,14 +102,20 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         );
         const valueType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[0]?.flags);
         if (valueType === undefined) {
-          if (typeArgs[0]?.symbol?.name === 'Uint8Array') {
+          const valueTypeName = typeArgs[0]?.symbol?.name;
+          if (valueTypeName === 'Uint8Array') {
             return new ArrayField(propName, DynamodbPrimitiveTypes.Binary);
+          }
+          if (valueTypeName === 'BigInt') {
+            return new ArrayField(propName, DynamodbPrimitiveTypes.Number);
           }
 
           if (shouldLenientTypeCheck) {
             return undefined;
           }
-          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
+          throw new Error(
+            `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`,
+          );
         }
         return new ArrayField(propName, valueType);
       }
@@ -119,14 +125,18 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         );
         const valueType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[0]?.flags);
         if (valueType === undefined) {
-          if (typeArgs[0]?.symbol?.name === 'Uint8Array') {
+          const valueTypeName = typeArgs[0]?.symbol?.name;
+          if (valueTypeName === 'Uint8Array') {
             return new SetField(propName, DynamodbPrimitiveTypes.Binary, shouldLenientTypeCheck);
+          }
+          if (valueTypeName === 'BigInt') {
+            return new SetField(propName, DynamodbPrimitiveTypes.Number, shouldLenientTypeCheck);
           }
 
           if (shouldLenientTypeCheck) {
             return undefined;
           }
-          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
+          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type: ${valueTypeName}`);
         }
         return new SetField(propName, valueType, shouldLenientTypeCheck);
       }
@@ -145,14 +155,20 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
 
         const valueType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[1]?.flags);
         if (valueType === undefined) {
-          if (typeArgs[1]?.symbol?.name === 'Uint8Array') {
+          const valueTypeName = typeArgs[1]?.symbol?.name;
+          if (valueTypeName === 'Uint8Array') {
             return new MapField(propName, keyType, DynamodbPrimitiveTypes.Binary, shouldLenientTypeCheck);
+          }
+          if (valueTypeName === 'BigInt') {
+            return new MapField(propName, keyType, DynamodbPrimitiveTypes.Number, shouldLenientTypeCheck);
           }
 
           if (shouldLenientTypeCheck) {
             return undefined;
           }
-          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
+          throw new Error(
+            `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`,
+          );
         }
 
         return new MapField(propName, keyType, valueType, shouldLenientTypeCheck);
@@ -179,11 +195,11 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         return new KeyValuePairMapField(propName, keyType, valueType, shouldLenientTypeCheck);
       }
 
+      // primitive types
       if (valueDeclSymbolName === 'Uint8Array') {
         return new PrimitiveField(propName, DynamodbPrimitiveTypes.Binary);
       }
 
-      // primitive types
       let colonTokenCame = false;
       for (const propNode of prop.valueDeclaration.getChildren()) {
         if (colonTokenCame) {
@@ -192,7 +208,9 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
             if (shouldLenientTypeCheck) {
               return undefined;
             }
-            throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
+            throw new Error(
+              `a property "${propName}" of the type "${typeName}" has unsupported type: "${propNode.getText()}"`,
+            );
           }
           return new PrimitiveField(propName, fieldType);
         }

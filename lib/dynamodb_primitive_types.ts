@@ -32,6 +32,7 @@ export function dynamodbPrimitiveTypeFromName(typeName: string | undefined): Dyn
     case 'string':
       return DynamodbPrimitiveTypes.String;
     case 'number':
+    case 'BigInt':
       return DynamodbPrimitiveTypes.Number;
     case 'boolean':
       return DynamodbPrimitiveTypes.Boolean;
