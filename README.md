@@ -1,4 +1,4 @@
-# ts-dynamodb-attributes-transformer
+# ts-dynamodb-attributes-transformer [![.github/workflows/check.yml](https://github.com/moznion/ts-dynamodb-attributes-transformer/actions/workflows/check.yml/badge.svg)](https://github.com/moznion/ts-dynamodb-attributes-transformer/actions/workflows/check.yml)
 
 Code transformer plugin for Amazon DynamoDB attributes powered by [TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API).
 
