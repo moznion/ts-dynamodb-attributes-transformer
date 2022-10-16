@@ -30,7 +30,7 @@ describe('dynamodb record transform', () => {
       ) {}
     }
 
-    const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(
+    const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(
       new Clazz(
         123,
         234,
@@ -201,7 +201,7 @@ describe('dynamodb record transform', () => {
       constructor(private privateString: string, justArgument: string) {}
     }
 
-    const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar'));
+    const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar'));
     expect(Object.keys(record)).toHaveLength(0);
   });
 
@@ -220,7 +220,7 @@ describe('dynamodb record transform', () => {
       ) {}
     }
 
-    const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(
+    const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(
       new Clazz(
         /re/,
         [/re/],
@@ -247,7 +247,7 @@ describe('dynamodb record transform', () => {
         readonly kvMapToBigint: { [key: string]: BigInt },
       ) {}
     }
-    const record: Record<string, AttributeValue> = dynamodbRecord<Clazz>(
+    const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(
       new Clazz(
         BigInt(123),
         [BigInt(123), BigInt(234)],
@@ -272,7 +272,7 @@ describe('dynamodb record transform', () => {
       readonly name: string;
       readonly tags: Map<string, string>;
     }
-    const record: Record<string, AttributeValue> = dynamodbRecord<Interface>({
+    const record: Record<keyof Interface, AttributeValue> = dynamodbRecord<Interface>({
       id: 12345,
       name: 'John Doe',
       tags: new Map<string, string>([
