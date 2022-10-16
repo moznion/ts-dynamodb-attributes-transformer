@@ -265,4 +265,24 @@ describe('dynamodb record transform', () => {
     expect(record['kvMapToBigint']).toEqual({ M: { bigint: { N: '890' } } });
     expect(Object.keys(record)).toHaveLength(6);
   });
+
+  test('interface', () => {
+    interface Interface {
+      readonly id: number;
+      readonly name: string;
+      readonly tags: Map<string, string>;
+    }
+    const record: Record<string, AttributeValue> = dynamodbRecord<Interface>({
+      id: 12345,
+      name: 'John Doe',
+      tags: new Map<string, string>([
+        ['foo', 'bar'],
+        ['buz', 'qux'],
+      ]),
+    });
+    expect(record['name']).toEqual({ S: 'John Doe' });
+    expect(record['tags']).toEqual({ M: { foo: { S: 'bar' }, buz: { S: 'qux' } } });
+    expect(record['id']).toEqual({ N: '12345' });
+    expect(Object.keys(record)).toHaveLength(3);
+  });
 });

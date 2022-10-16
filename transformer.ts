@@ -85,8 +85,11 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
 
       const propName = prop.name;
 
-      if (prop.valueDeclaration.kind !== ts.SyntaxKind.Parameter) {
-        const msg = `unexpected error: a property "${propName}" of the type "${typeName}" doesn't have parameter kind`;
+      if (
+        prop.valueDeclaration.kind !== ts.SyntaxKind.Parameter &&
+        prop.valueDeclaration.kind !== ts.SyntaxKind.PropertySignature
+      ) {
+        const msg = `a property "${propName}" of the type "${typeName}" doesn't have parameter kind; maybe the ${typeName} is not class of interface`;
         if (shouldLenientTypeCheck) {
           warn(msg);
           return undefined;
