@@ -26,9 +26,8 @@
       }
     ]
   },
-  "include": [
-  ],
   "exclude": [
+    "tests",
     "node_modules"
   ]
 }

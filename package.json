@@ -1,10 +1,11 @@
 {
-  "name": "ts-dynamodb-attributes-transformer",
+  "name": "@moznion/ts-dynamodb-attributes-transformer",
   "version": "0.0.1",
-  "description": "TypeScript Compiler API Transformer for Amazon DynamoDB attributes",
+  "description": "Code transformer plugin for Amazon DynamoDB attributes powered by TypeScript Compiler API",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
+    "build": "tsc",
     "test": "TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK=true jest",
     "fmt": "find -name '*.ts' -not -path './node_modules/*' | xargs prettier --write",
     "lint": "eslint ."
@@ -39,5 +40,12 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.186.0"
-  }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "transformer.js",
+    "transformer.ts",
+    "lib"
+  ]
 }
