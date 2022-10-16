@@ -1,5 +1,6 @@
 import ts from 'typescript';
 import { DynamodbPrimitiveTypes } from './dynamodb_primitive_types';
+import { warn } from './logger';
 
 export interface DynamodbItemField {
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined;
@@ -65,10 +66,12 @@ export class SetField implements DynamodbItemField {
       this.valueType !== DynamodbPrimitiveTypes.Number &&
       this.valueType !== DynamodbPrimitiveTypes.Binary
     ) {
+      const msg = `a type parameter of the Set type property "${this.fieldName}" is unsupported one`;
       if (this.shouldLenientTypeCheck) {
+        warn(msg);
         return undefined;
       }
-      throw new Error(`a type parameter of the Set type property "${this.fieldName}" is unsupported one`);
+      throw new Error(msg);
     }
     const mapToStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.map(v => `${v}`)' : '';
 
@@ -97,10 +100,12 @@ export class MapField implements DynamodbItemField {
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
     if (this.keyValueType !== DynamodbPrimitiveTypes.String) {
+      const msg = `a Map type property "${this.fieldName}" has non-string key type`;
       if (this.shouldLenientTypeCheck) {
+        warn(msg);
         return undefined;
       }
-      throw new Error(`a Map type property "${this.fieldName}" has non-string key type`);
+      throw new Error(msg);
     }
 
     const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';
@@ -161,10 +166,12 @@ export class KeyValuePairMapField implements DynamodbItemField {
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
     if (this.keyValueType !== DynamodbPrimitiveTypes.String) {
+      const msg = `a Map type property "${this.fieldName}" has non-string key type`;
       if (this.shouldLenientTypeCheck) {
+        warn(msg);
         return undefined;
       }
-      throw new Error(`a Map type property "${this.fieldName}" has non-string key type`);
+      throw new Error(msg);
     }
 
     const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';

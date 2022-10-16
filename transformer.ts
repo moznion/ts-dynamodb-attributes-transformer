@@ -13,6 +13,7 @@ import {
   PrimitiveField,
   SetField,
 } from './lib/dynamodb_item_field';
+import { warn } from './lib/logger';
 
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
   return (context: ts.TransformationContext) => (file: ts.SourceFile) => visitNodeAndChildren(file, program, context);
@@ -85,12 +86,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
       const propName = prop.name;
 
       if (prop.valueDeclaration.kind !== ts.SyntaxKind.Parameter) {
+        const msg = `unexpected error: a property "${propName}" of the type "${typeName}" doesn't have parameter kind`;
         if (shouldLenientTypeCheck) {
+          warn(msg);
           return undefined;
         }
-        throw new Error(
-          `unexpected error: a property "${propName}" of the type "${typeName}" doesn't have parameter kind`,
-        );
+        throw new Error(msg);
       }
 
       const valueDeclSymbol = typeChecker.getTypeAtLocation(prop.valueDeclaration).symbol;
@@ -110,12 +111,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
             return new ArrayField(propName, DynamodbPrimitiveTypes.Number);
           }
 
+          const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
           if (shouldLenientTypeCheck) {
+            warn(msg);
             return undefined;
           }
-          throw new Error(
-            `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`,
-          );
+          throw new Error(msg);
         }
         return new ArrayField(propName, valueType);
       }
@@ -133,10 +134,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
             return new SetField(propName, DynamodbPrimitiveTypes.Number, shouldLenientTypeCheck);
           }
 
+          const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: ${valueTypeName}`;
           if (shouldLenientTypeCheck) {
+            warn(msg);
             return undefined;
           }
-          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type: ${valueTypeName}`);
+          throw new Error(msg);
         }
         return new SetField(propName, valueType, shouldLenientTypeCheck);
       }
@@ -147,10 +150,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
 
         const keyType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[0]?.flags);
         if (keyType === undefined) {
+          const msg = `a Map type property "${propName}" of the type "${typeName}" has non-string key type`;
           if (shouldLenientTypeCheck) {
+            warn(msg);
             return undefined;
           }
-          throw new Error(`a Map type property "${propName}" of the type "${typeName}" has non-string key type`);
+          throw new Error(msg);
         }
 
         const valueType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[1]?.flags);
@@ -163,12 +168,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
             return new MapField(propName, keyType, DynamodbPrimitiveTypes.Number, shouldLenientTypeCheck);
           }
 
+          const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
           if (shouldLenientTypeCheck) {
+            warn(msg);
             return undefined;
           }
-          throw new Error(
-            `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`,
-          );
+          throw new Error(msg);
         }
 
         return new MapField(propName, keyType, valueType, shouldLenientTypeCheck);
@@ -177,19 +182,26 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         // for key-value pair map notation
         const kvType = extractKeyValueTypesFromKeyValuePairMapSyntax(prop.valueDeclaration.getChildren());
 
-        const keyType = dynamodbPrimitiveTypeFromName(kvType?.[0]);
+        const keyTypeName = kvType?.[0];
+        const keyType = dynamodbPrimitiveTypeFromName(keyTypeName);
         if (keyType === undefined) {
+          const msg = `a Map type property "${propName}" of the type "${typeName}" has non-string key type: "${keyTypeName}"`;
           if (shouldLenientTypeCheck) {
+            warn(msg);
             return undefined;
           }
-          throw new Error(`a Map type property "${propName}" of the type "${typeName}" has non-string key type`);
+          throw new Error(msg);
         }
-        const valueType = dynamodbPrimitiveTypeFromName(kvType?.[1]);
+
+        const valueTypeName = kvType?.[1];
+        const valueType = dynamodbPrimitiveTypeFromName(valueTypeName);
         if (valueType === undefined) {
+          const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
           if (shouldLenientTypeCheck) {
+            warn(msg);
             return undefined;
           }
-          throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
+          throw new Error(msg);
         }
 
         return new KeyValuePairMapField(propName, keyType, valueType, shouldLenientTypeCheck);
@@ -205,12 +217,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
         if (colonTokenCame) {
           const fieldType = dynamodbPrimitiveTypeFromName(propNode.getText());
           if (fieldType === undefined) {
+            const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${propNode.getText()}"`;
             if (shouldLenientTypeCheck) {
+              warn(msg);
               return undefined;
             }
-            throw new Error(
-              `a property "${propName}" of the type "${typeName}" has unsupported type: "${propNode.getText()}"`,
-            );
+            throw new Error(msg);
           }
           return new PrimitiveField(propName, fieldType);
         }
@@ -219,10 +231,12 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
 
       // should never reach here
 
+      const msg = `unexpected error: a property "${propName}" of the type "${typeName}" has unsupported type`;
       if (shouldLenientTypeCheck) {
+        warn(msg);
         return undefined;
       }
-      throw new Error(`a property "${propName}" of the type "${typeName}" has unsupported type`);
+      throw new Error(msg);
     })
     .map(field => {
       return field?.generateCode(argVarNameIdent.text);
