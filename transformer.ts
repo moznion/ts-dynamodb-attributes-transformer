@@ -246,11 +246,11 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
     })
     .filter((c): c is ts.ObjectLiteralElementLike => !!c);
 
-  return ts.factory.createImmediatelyInvokedFunctionExpression([
-    ts.factory.createVariableStatement([], [ts.factory.createVariableDeclaration(argVarNameIdent)]),
-    ts.factory.createBinaryExpression(argVarNameIdent, ts.SyntaxKind.EqualsToken, node.arguments[0]),
-    ts.factory.createReturnStatement(ts.factory.createObjectLiteralExpression(objectProps, true)),
-  ] as ts.Statement[]);
+  return ts.factory.createImmediatelyInvokedFunctionExpression(
+    [ts.factory.createReturnStatement(ts.factory.createObjectLiteralExpression(objectProps, true))] as ts.Statement[],
+    ts.factory.createParameterDeclaration([], undefined, argVarNameIdent, undefined, node.typeArguments[0], undefined),
+    node.arguments[0],
+  );
 }
 
 function extractKeyValueTypesFromKeyValuePairMapSyntax(nodes: ts.Node[]): [string, string] | undefined {
