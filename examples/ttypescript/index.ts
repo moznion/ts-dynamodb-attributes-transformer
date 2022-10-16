@@ -1,4 +1,4 @@
-import { dynamodbRecord } from '../../index';
+import { dynamodbRecord } from '@moznion/ts-dynamodb-attributes-transformer';
 import { AttributeValue } from '@aws-sdk/client-dynamodb';
 
 interface User {

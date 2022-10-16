@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
-    "run": "ttsc ./index.ts && node ./index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "run": "ttsc ./index.ts && node ./index.js"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@moznion/ts-dynamodb-attributes-transformer": "0.0.1",
+    "ttypescript": "1.5.13"
+  }
 }
