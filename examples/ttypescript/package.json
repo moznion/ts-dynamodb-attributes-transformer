@@ -1,0 +1,10 @@
+{
+  "name": "ttypescript",
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "run": "ttsc ./index.ts && node ./index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT"
+}
