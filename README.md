@@ -4,9 +4,9 @@ Code transformer plugin for Amazon DynamoDB attributes powered by [TypeScript Co
 
 ## How it works
 
-This plugin replaces the TypeScript function invocation of `dynamodbRecord<T>(obj: T)` with `Record<string, AttributeValue>` value that is defined in aws-sdk-js-v3 according to the type `T` and the contents of the object. In short, this plugin generates the DynamoDB attribute code for every property of type `T`.
+This plugin replaces the TypeScript function invocation of `dynamodbRecord<T>(obj: T)` with `Record<keyof T, AttributeValue>` value that is defined in aws-sdk-js-v3 according to the type `T` and the contents of the object. In short, this plugin generates the DynamoDB attribute code for every property of type `T`.
 
-This plugin powers the users can do drop-in replacements for the existing `Record<string, AttributeValue>` value and/or the generator with `dynamodbRecord<T>(obj: T)` function.
+This plugin powers the users can do drop-in replacements for the existing `Record<keyof T, AttributeValue>` value and/or the generator with `dynamodbRecord<T>(obj: T)` function.
 
 Manual making the translation layer between the object and DynamoDB's Record is no longer needed!
 
@@ -27,7 +27,7 @@ interface User {
   readonly tags: Map<string, string>;
 }
 
-const record: Record<string, AttributeValue> = dynamodbRecord<User>({
+const record: Record<keyof User, AttributeValue> = dynamodbRecord<User>({
   id: 12345,
   name: 'John Doe',
   tags: new Map<string, string>([
@@ -38,7 +38,7 @@ const record: Record<string, AttributeValue> = dynamodbRecord<User>({
 
 /*
  * Then you can use this record value on the aws-sdk-js-v3's DynamoDB client; for example,
- * 
+ *
  *   const dyn = new DynamoDBClient(...);
  *   await dyn.send(new PutItemCommand({
  *     TableName: "...",
@@ -81,7 +81,7 @@ const record = function () {
 }();
 /*
  * This record is equal to the following object:
- * 
+ *
  *   {
  *     id: { N: "12345" },
  *     name: { S: "John Doe" },
@@ -97,11 +97,11 @@ const record = function () {
 
 ## How to use this transformer
 
-This plugin exports a function that has the signature `dynamodbRecord<T extends object>(item: T): Record<string, AttributeValue>`.
+This plugin exports a function that has the signature `dynamodbRecord<T extends object>(item: T): Record<keyof T, AttributeValue>`.
 
-This function is a marker to indicate to the transformer to replace this function invocation with the generated DynamoDB record code. Therefore, there are some restrictions: 
+This function is a marker to indicate to the transformer to replace this function invocation with the generated DynamoDB record code. Therefore, there are some restrictions:
 
-- Type parameter `T` is mandatory parameter (i.e. this mustn't be omitted). A transformer analyzes the type of the given `T` to collect the property information. 
+- Type parameter `T` is mandatory parameter (i.e. this mustn't be omitted). A transformer analyzes the type of the given `T` to collect the property information.
 - Type `T` must be class or interface.
 
 ### Examples

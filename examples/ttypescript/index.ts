@@ -7,7 +7,7 @@ interface User {
   readonly tags: Map<string, string>;
 }
 
-const record: Record<string, AttributeValue> = dynamodbRecord<User>({
+const record: Record<keyof User, AttributeValue> = dynamodbRecord<User>({
   id: 12345,
   name: 'John Doe',
   tags: new Map<string, string>([
