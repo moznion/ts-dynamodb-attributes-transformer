@@ -8,7 +8,8 @@
     "build": "tsc",
     "test": "TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK=true jest",
     "fmt": "find -name '*.ts' -not -path './node_modules/*' | xargs prettier --write",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "release": "npm run build && npm publish"
   },
   "repository": {
     "type": "git",
