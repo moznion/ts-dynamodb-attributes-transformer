@@ -280,9 +280,9 @@ describe('dynamodb record transform', () => {
         ['buz', 'qux'],
       ]),
     });
+    expect(record['id']).toEqual({ N: '12345' });
     expect(record['name']).toEqual({ S: 'John Doe' });
     expect(record['tags']).toEqual({ M: { foo: { S: 'bar' }, buz: { S: 'qux' } } });
-    expect(record['id']).toEqual({ N: '12345' });
     expect(Object.keys(record)).toHaveLength(3);
   });
 });
