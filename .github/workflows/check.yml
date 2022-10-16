@@ -1,0 +1,26 @@
+---
+on:
+  push:
+
+jobs:
+  check:
+    name: CI checking
+    strategy:
+      matrix:
+        node-version: [16, 18]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Set up node
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Check out
+      uses: actions/checkout@v3
+    - name: npm ci
+      run: npm ci
+    - name: run eslint
+      run: npm run lint
+    - name: E2E test
+      run: npm run test
+
