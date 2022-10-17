@@ -1,0 +1,17 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "es2016",
+    "lib": [],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strict": true,
+
+    "plugins": [
+      {
+        "transform": "../../transformer.ts"
+      }
+    ]
+  }
+}
+
