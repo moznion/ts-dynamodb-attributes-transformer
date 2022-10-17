@@ -50,16 +50,7 @@ const record: Record<keyof User, AttributeValue> = dynamodbRecord<User>({
 Then this plugin transforms the above TypeScript code like the following JavaScript code:
 
 ```js
-const record = function () {
-    var arg;
-    arg = {
-        id: 12345,
-        name: 'John Doe',
-        tags: new Map([
-            ['foo', 'bar'],
-            ['buz', 'qux'],
-        ]),
-    }
+const record = function (arg) {
     return {
         id: {
             N: arg.id.toString()
@@ -78,7 +69,14 @@ const record = function () {
             }()
         }
     };
-}();
+}({
+    id: 12345,
+    name: 'John Doe',
+    tags: new Map([
+        ['foo', 'bar'],
+        ['buz', 'qux'],
+    ]),
+});
 /*
  * This record is equal to the following object:
  *
