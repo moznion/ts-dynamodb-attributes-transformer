@@ -1,6 +1,6 @@
 # ts-dynamodb-attributes-transformer [![.github/workflows/check.yml](https://github.com/moznion/ts-dynamodb-attributes-transformer/actions/workflows/check.yml/badge.svg)](https://github.com/moznion/ts-dynamodb-attributes-transformer/actions/workflows/check.yml) [![npm version](https://badge.fury.io/js/@moznion%2Fts-dynamodb-attributes-transformer.svg)](https://badge.fury.io/js/@moznion%2Fts-dynamodb-attributes-transformer)
 
-Code transformer plugin for Amazon DynamoDB attributes powered by [TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API).
+Code transformer plugin powered by [TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) that transforms TypeScript object to Amazon DynamoDB attributes.
 
 ## How it works
 
