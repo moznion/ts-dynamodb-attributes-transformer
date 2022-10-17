@@ -15,6 +15,19 @@ Manual making the translation layer between the object and DynamoDB's Record is 
 - To do automatic generation of the [DynamoDB attribute data type](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html) code that is recognizable by [aws-sdk-js-v3](https://github.com/aws/aws-sdk-js-v3), with type safety.
 - Performance. This uses TypeScript Compiler API, so it generates/determine the DynamoDB attribute code at the compiling timing. This means the logic doesn't have to do a reflection on the fly so this contributes to a good performance.
 
+### Benchmark
+
+The benchmark result between this project and [kayomarz/dynamodb-data-types](https://github.com/kayomarz/dynamodb-data-types) is the following:
+
+```
+node version: v16.17.0
+dynamodb-data-types marshalling x 3,475,450 ops/sec ±0.45% (96 runs sampled)
+ts-dynamodb-attributes-transformer marshalling x 13,405,409 ops/sec ±0.43% (91 runs sampled)
+Fastest is ts-dynamodb-attributes-transformer marshalling
+```
+
+Please see also [benchmark](./examples/benchmark) project.
+
 ## Synopsis
 
 ```ts
