@@ -7,7 +7,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@moznion/ts-dynamodb-attributes-transformer": "0.0.1",
+    "@moznion/ts-dynamodb-attributes-transformer": "0.1.0",
     "ttypescript": "1.5.13"
   }
 }
