@@ -1,6 +1,7 @@
 import ts from 'typescript';
 import path from 'path';
 import { DynamodbRecordTransformer } from './lib/dynamodb_record_transformer';
+import { FromDynamodbRecordTransformer } from './lib/from_dynamodb_record_transformer';
 
 export default function transformer(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
   return (context: ts.TransformationContext) => (file: ts.SourceFile) => visitNodeAndChildren(file, program, context);
@@ -37,11 +38,15 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
     return undefined;
   }
 
-  if (!isDynamodbRecordCallExpression(node, typeChecker)) {
-    return node;
+  if (isFunctionCallExpression(DynamodbRecordTransformer.dynamodbRecordFuncName, node, typeChecker)) {
+    return DynamodbRecordTransformer.visitNode(node, typeChecker);
   }
 
-  return DynamodbRecordTransformer.visitNode(node, typeChecker);
+  if (isFunctionCallExpression(FromDynamodbRecordTransformer.funcName, node, typeChecker)) {
+    return FromDynamodbRecordTransformer.visitNode(node, typeChecker);
+  }
+
+  return node;
 }
 
 const indexJs = path.join(__dirname, 'index.js');
@@ -63,16 +68,17 @@ function isDynamodbRecordImportExpression(node: ts.Node): node is ts.ImportDecla
 }
 
 const indexTs = path.join(__dirname, 'index.d.ts');
-function isDynamodbRecordCallExpression(node: ts.Node, typeChecker: ts.TypeChecker): node is ts.CallExpression {
+
+function isFunctionCallExpression(
+  functionName: string,
+  node: ts.Node,
+  typeChecker: ts.TypeChecker,
+): node is ts.CallExpression {
   if (!ts.isCallExpression(node)) {
     return false;
   }
   const declaration = typeChecker.getResolvedSignature(node)?.declaration;
-  if (
-    !declaration ||
-    ts.isJSDocSignature(declaration) ||
-    declaration.name?.getText() !== DynamodbRecordTransformer.dynamodbRecordFuncName
-  ) {
+  if (!declaration || ts.isJSDocSignature(declaration) || declaration.name?.getText() !== functionName) {
     return false;
   }
   try {

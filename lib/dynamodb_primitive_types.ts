@@ -53,3 +53,45 @@ export function dynamodbPrimitiveTypeFromName(typeName: string | undefined): Dyn
       return undefined;
   }
 }
+
+export interface DynamodbPrimitiveValueToJSValueConvertingOp {
+  leftOp: string;
+  rightOp: string;
+}
+
+export function dynamodbPrimitiveValueToJSValueConvertingOp(
+  primitiveType: DynamodbPrimitiveTypes,
+): DynamodbPrimitiveValueToJSValueConvertingOp {
+  switch (primitiveType) {
+    case DynamodbPrimitiveTypes.String:
+      return {
+        leftOp: '',
+        rightOp: '',
+      };
+    case DynamodbPrimitiveTypes.Number:
+      return {
+        leftOp: '(() => { const n = Number(',
+        rightOp: '); return isNaN(n) ? undefined : n; })()',
+      };
+    case DynamodbPrimitiveTypes.Boolean:
+      return {
+        leftOp: '',
+        rightOp: '',
+      };
+    case DynamodbPrimitiveTypes.Null:
+      return {
+        leftOp: '(',
+        rightOp: ' === true ? null : undefined)',
+      };
+    case DynamodbPrimitiveTypes.Binary:
+      return {
+        leftOp: '',
+        rightOp: '',
+      };
+    default:
+      return {
+        leftOp: '',
+        rightOp: '',
+      };
+  }
+}

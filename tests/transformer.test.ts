@@ -14,6 +14,8 @@ describe('dynamodb record transform', () => {
         readonly nil: unknown,
         readonly stringSlice: string[],
         readonly stringArray: Array<string>,
+        readonly numSlice: number[],
+        readonly numArray: Array<number>,
         readonly numSet: Set<number>,
         readonly stringSet: Set<string>,
         readonly bytesSet: Set<Uint8Array>,
@@ -40,6 +42,8 @@ describe('dynamodb record transform', () => {
         null,
         ['slice', 'str'],
         new Array<string>('array', 'str'),
+        [123, 234],
+        new Array<number>(345, 456),
         new Set<number>([123, 234]),
         new Set<string>(['set', 'str']),
         new Set<Uint8Array>([new TextEncoder().encode('set'), new TextEncoder().encode('bytes')]),
@@ -83,7 +87,7 @@ describe('dynamodb record transform', () => {
       ),
     );
 
-    expect(Object.keys(record)).toHaveLength(21);
+    expect(Object.keys(record)).toHaveLength(23);
     expect(record['publicNum']).toEqual({ N: '123' });
     expect(record['readonlyNum']).toEqual({ N: '234' });
     expect(record['string']).toEqual({ S: 'str' });
@@ -92,6 +96,8 @@ describe('dynamodb record transform', () => {
     expect(record['nil']).toEqual({ NULL: true });
     expect(record['stringSlice']).toEqual({ L: [{ S: 'slice' }, { S: 'str' }] });
     expect(record['stringArray']).toEqual({ L: [{ S: 'array' }, { S: 'str' }] });
+    expect(record['numSlice']).toEqual({ L: [{ N: '123' }, { N: '234' }] });
+    expect(record['numArray']).toEqual({ L: [{ N: '345' }, { N: '456' }] });
     expect(record['numSet']).toEqual({ NS: ['123', '234'] });
     expect(record['stringSet']).toEqual({ SS: ['set', 'str'] });
     expect(record['bytesSet']).toEqual({ BS: [new TextEncoder().encode('set'), new TextEncoder().encode('bytes')] });

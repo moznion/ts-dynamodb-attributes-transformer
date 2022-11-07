@@ -1,9 +1,5 @@
 import ts from 'typescript';
-import {
-  DynamodbPrimitiveTypes,
-  dynamodbPrimitiveTypeFromTypeFlag,
-  dynamodbPrimitiveTypeFromName,
-} from './dynamodb_primitive_types';
+import { warn } from './logger';
 import {
   ArrayField,
   DynamodbItemField,
@@ -12,36 +8,41 @@ import {
   PrimitiveField,
   SetField,
 } from './dynamodb_item_field';
-import { warn } from './logger';
+import {
+  dynamodbPrimitiveTypeFromName,
+  dynamodbPrimitiveTypeFromTypeFlag,
+  DynamodbPrimitiveTypes,
+} from './dynamodb_primitive_types';
 
-export class DynamodbRecordTransformer {
-  public static readonly dynamodbRecordFuncName = 'dynamodbRecord'; // TODO
+export class FromDynamodbRecordTransformer {
+  public static readonly funcName = 'fromDynamodbRecord';
   private static readonly shouldLenientTypeCheck = !!process.env['TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK']; // TODO
 
   public static visitNode(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node | undefined {
     if (node.typeArguments === undefined || node.typeArguments.length !== 1 || !node.typeArguments[0]) {
       throw new Error(
-        `No type argument on ${DynamodbRecordTransformer.dynamodbRecordFuncName}(). Please put a type argument on the function`,
+        `No type argument on ${FromDynamodbRecordTransformer.funcName}(). Please put a type argument on the function`,
       );
     }
 
-    const typeName = node.typeArguments[0].getText();
+    const typ = node.typeArguments[0];
+    const typeName = typ.getText();
 
     if (node.arguments.length !== 1 || !node.arguments[0]) {
       throw new Error(
-        `No argument on ${DynamodbRecordTransformer.dynamodbRecordFuncName}(). Please put an argument that has ${typeName} type on the function`,
+        `No argument on ${FromDynamodbRecordTransformer.funcName}(). Please put an argument that has ${typeName} type on the function`,
       );
     }
 
     const argVarNameIdent = ts.factory.createIdentifier('arg');
-    const type = typeChecker.getTypeFromTypeNode(node.typeArguments[0]);
+    const type = typeChecker.getTypeFromTypeNode(typ);
     const properties = typeChecker.getPropertiesOfType(type);
     const objectProps = properties
       .map((prop): DynamodbItemField | undefined => {
         if (
           !prop.valueDeclaration ||
           !ts.canHaveModifiers(prop.valueDeclaration) ||
-          !DynamodbRecordTransformer.isPropertyModifierInArgumentSuitableForDynamodbAttr(
+          !FromDynamodbRecordTransformer.isPropertyModifierInArgumentSuitableForDynamodbAttr(
             ts.getModifiers(prop.valueDeclaration),
           )
         ) {
@@ -56,7 +57,7 @@ export class DynamodbRecordTransformer {
           prop.valueDeclaration.kind !== ts.SyntaxKind.PropertySignature
         ) {
           const msg = `a property "${propName}" of the type "${typeName}" doesn't have parameter kind; maybe the ${typeName} is not class of interface`;
-          if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+          if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
             warn(msg);
             return undefined;
           }
@@ -81,7 +82,7 @@ export class DynamodbRecordTransformer {
             }
 
             const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
-            if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+            if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
               warn(msg);
               return undefined;
             }
@@ -100,25 +101,25 @@ export class DynamodbRecordTransformer {
               return new SetField(
                 propName,
                 DynamodbPrimitiveTypes.Binary,
-                DynamodbRecordTransformer.shouldLenientTypeCheck,
+                FromDynamodbRecordTransformer.shouldLenientTypeCheck,
               );
             }
             if (valueTypeName === 'BigInt') {
               return new SetField(
                 propName,
                 DynamodbPrimitiveTypes.Number,
-                DynamodbRecordTransformer.shouldLenientTypeCheck,
+                FromDynamodbRecordTransformer.shouldLenientTypeCheck,
               );
             }
 
             const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: ${valueTypeName}`;
-            if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+            if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
               warn(msg);
               return undefined;
             }
             throw new Error(msg);
           }
-          return new SetField(propName, valueType, DynamodbRecordTransformer.shouldLenientTypeCheck);
+          return new SetField(propName, valueType, FromDynamodbRecordTransformer.shouldLenientTypeCheck);
         }
         if (valueDeclSymbolName == 'Map') {
           const typeArgs = typeChecker.getTypeArguments(
@@ -128,7 +129,7 @@ export class DynamodbRecordTransformer {
           const keyType = dynamodbPrimitiveTypeFromTypeFlag(typeArgs[0]?.flags);
           if (keyType === undefined) {
             const msg = `a Map type property "${propName}" of the type "${typeName}" has non-string key type`;
-            if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+            if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
               warn(msg);
               return undefined;
             }
@@ -143,7 +144,7 @@ export class DynamodbRecordTransformer {
                 propName,
                 keyType,
                 DynamodbPrimitiveTypes.Binary,
-                DynamodbRecordTransformer.shouldLenientTypeCheck,
+                FromDynamodbRecordTransformer.shouldLenientTypeCheck,
               );
             }
             if (valueTypeName === 'BigInt') {
@@ -151,23 +152,23 @@ export class DynamodbRecordTransformer {
                 propName,
                 keyType,
                 DynamodbPrimitiveTypes.Number,
-                DynamodbRecordTransformer.shouldLenientTypeCheck,
+                FromDynamodbRecordTransformer.shouldLenientTypeCheck,
               );
             }
 
             const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
-            if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+            if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
               warn(msg);
               return undefined;
             }
             throw new Error(msg);
           }
 
-          return new MapField(propName, keyType, valueType, DynamodbRecordTransformer.shouldLenientTypeCheck);
+          return new MapField(propName, keyType, valueType, FromDynamodbRecordTransformer.shouldLenientTypeCheck);
         }
         if ((valueDeclSymbol?.flags & ts.SymbolFlags.TypeLiteral) === ts.SymbolFlags.TypeLiteral) {
           // for key-value pair map notation
-          const kvType = DynamodbRecordTransformer.extractKeyValueTypesFromKeyValuePairMapSyntax(
+          const kvType = FromDynamodbRecordTransformer.extractKeyValueTypesFromKeyValuePairMapSyntax(
             prop.valueDeclaration.getChildren(),
           );
 
@@ -175,7 +176,7 @@ export class DynamodbRecordTransformer {
           const keyType = dynamodbPrimitiveTypeFromName(keyTypeName);
           if (keyType === undefined) {
             const msg = `a Map type property "${propName}" of the type "${typeName}" has non-string key type: "${keyTypeName}"`;
-            if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+            if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
               warn(msg);
               return undefined;
             }
@@ -186,7 +187,7 @@ export class DynamodbRecordTransformer {
           const valueType = dynamodbPrimitiveTypeFromName(valueTypeName);
           if (valueType === undefined) {
             const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
-            if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+            if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
               warn(msg);
               return undefined;
             }
@@ -197,7 +198,7 @@ export class DynamodbRecordTransformer {
             propName,
             keyType,
             valueType,
-            DynamodbRecordTransformer.shouldLenientTypeCheck,
+            FromDynamodbRecordTransformer.shouldLenientTypeCheck,
           );
         }
 
@@ -212,7 +213,7 @@ export class DynamodbRecordTransformer {
             const fieldType = dynamodbPrimitiveTypeFromName(propNode.getText());
             if (fieldType === undefined) {
               const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${propNode.getText()}"`;
-              if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+              if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
                 warn(msg);
                 return undefined;
               }
@@ -226,14 +227,14 @@ export class DynamodbRecordTransformer {
         // should never reach here
 
         const msg = `unexpected error: a property "${propName}" of the type "${typeName}" has unsupported type`;
-        if (DynamodbRecordTransformer.shouldLenientTypeCheck) {
+        if (FromDynamodbRecordTransformer.shouldLenientTypeCheck) {
           warn(msg);
           return undefined;
         }
         throw new Error(msg);
       })
-      .map(field => {
-        return field?.generateCode(argVarNameIdent.text);
+      .map(f => {
+        return f?.generateCodeForUnmarshal(argVarNameIdent.text);
       })
       .filter((c): c is ts.ObjectLiteralElementLike => !!c);
 
