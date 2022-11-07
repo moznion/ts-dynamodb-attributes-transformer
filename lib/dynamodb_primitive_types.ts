@@ -63,31 +63,19 @@ export function dynamodbPrimitiveValueToJSValueConvertingOp(
   primitiveType: DynamodbPrimitiveTypes,
 ): DynamodbPrimitiveValueToJSValueConvertingOp {
   switch (primitiveType) {
-    case DynamodbPrimitiveTypes.String:
-      return {
-        leftOp: '',
-        rightOp: '',
-      };
     case DynamodbPrimitiveTypes.Number:
       return {
         leftOp: '(() => { const n = Number(',
         rightOp: '); return isNaN(n) ? undefined : n; })()',
-      };
-    case DynamodbPrimitiveTypes.Boolean:
-      return {
-        leftOp: '',
-        rightOp: '',
       };
     case DynamodbPrimitiveTypes.Null:
       return {
         leftOp: '(',
         rightOp: ' === true ? null : undefined)',
       };
+    case DynamodbPrimitiveTypes.String:
     case DynamodbPrimitiveTypes.Binary:
-      return {
-        leftOp: '',
-        rightOp: '',
-      };
+    case DynamodbPrimitiveTypes.Boolean:
     default:
       return {
         leftOp: '',
