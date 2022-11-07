@@ -28,6 +28,7 @@
   },
   "exclude": [
     "tests",
+    "examples",
     "node_modules"
   ]
 }
