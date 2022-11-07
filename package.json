@@ -6,7 +6,7 @@
   "types": "index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK=true jest",
+    "test": "TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK=true jest --no-cache",
     "fmt": "find -name '*.ts' -not -path './node_modules/*' | xargs prettier --write",
     "lint": "eslint .",
     "release": "npm run build && npm publish"
