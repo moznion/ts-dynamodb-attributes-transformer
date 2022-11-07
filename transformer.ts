@@ -38,7 +38,7 @@ function visitNode(node: ts.Node, program: ts.Program): ts.Node | undefined {
     return undefined;
   }
 
-  if (isFunctionCallExpression(DynamodbRecordTransformer.dynamodbRecordFuncName, node, typeChecker)) {
+  if (isFunctionCallExpression(DynamodbRecordTransformer.funcName, node, typeChecker)) {
     return DynamodbRecordTransformer.visitNode(node, typeChecker);
   }
 
