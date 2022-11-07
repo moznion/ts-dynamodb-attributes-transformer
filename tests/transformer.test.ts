@@ -285,4 +285,30 @@ describe('dynamodb record transform', () => {
     expect(record['tags']).toEqual({ M: { foo: { S: 'bar' }, buz: { S: 'qux' } } });
     expect(Object.keys(record)).toHaveLength(3);
   });
+
+  test('optional', () => {
+    class Clazz {
+      constructor(
+        readonly optionalStr1: string | undefined,
+        readonly optionalStr2: undefined | string,
+        readonly optionalStr3?: string,
+      ) {}
+    }
+
+    {
+      const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(
+        new Clazz(undefined, undefined, undefined),
+      );
+      expect(record['optionalStr1']).toEqual({ S: undefined });
+      expect(record['optionalStr2']).toEqual({ S: undefined });
+      expect(record['optionalStr3']).toEqual({ S: undefined });
+    }
+
+    {
+      const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar', 'buz'));
+      expect(record['optionalStr1']).toEqual({ S: 'foo' });
+      expect(record['optionalStr2']).toEqual({ S: 'bar' });
+      expect(record['optionalStr3']).toEqual({ S: 'buz' });
+    }
+  });
 });

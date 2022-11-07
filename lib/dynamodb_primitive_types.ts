@@ -28,6 +28,15 @@ export function dynamodbPrimitiveTypeFromTypeFlag(flag: ts.TypeFlags | undefined
 }
 
 export function dynamodbPrimitiveTypeFromName(typeName: string | undefined): DynamodbPrimitiveTypes | undefined {
+  if (typeName === undefined) {
+    return undefined;
+  }
+
+  const unionTypes: string[] = typeName.split('|').map(t => t.trim());
+  const isUndefinedType = (t: string): boolean => t === 'undefined';
+  // const isOptionalType = unionTypes.find(isUndefinedType);
+  typeName = unionTypes.filter(t => !isUndefinedType(t)).join('|');
+
   switch (typeName) {
     case 'string':
       return DynamodbPrimitiveTypes.String;
