@@ -1,6 +1,17 @@
 import ts from 'typescript';
 
-export enum DynamodbPrimitiveTypes {
+export class DynamodbPrimitiveType {
+  constructor(public readonly kind: DynamodbPrimitiveTypeKinds, private readonly flag: number) {}
+
+  public isBigInt() {
+    return (
+      this.kind === DynamodbPrimitiveTypeKinds.Number &&
+      (this.flag & DynamodbPrimitiveTypeFlags.BigInt) === DynamodbPrimitiveTypeFlags.BigInt
+    );
+  }
+}
+
+export enum DynamodbPrimitiveTypeKinds {
   String = 'S',
   Number = 'N',
   Boolean = 'BOOL',
@@ -8,26 +19,31 @@ export enum DynamodbPrimitiveTypes {
   Binary = 'B',
 }
 
-export function dynamodbPrimitiveTypeFromTypeFlag(flag: ts.TypeFlags | undefined): DynamodbPrimitiveTypes | undefined {
+export enum DynamodbPrimitiveTypeFlags {
+  NA = 0b0000,
+  BigInt = 0b0001,
+}
+
+export function dynamodbPrimitiveTypeFromTypeFlag(flag: ts.TypeFlags | undefined): DynamodbPrimitiveType | undefined {
   if (flag === undefined) {
     return undefined;
   }
   if ((flag & ts.TypeFlags.String) === ts.TypeFlags.String) {
-    return DynamodbPrimitiveTypes.String;
+    return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.String, DynamodbPrimitiveTypeFlags.NA);
   }
   if ((flag & ts.TypeFlags.Number) === ts.TypeFlags.Number) {
-    return DynamodbPrimitiveTypes.Number;
+    return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Number, DynamodbPrimitiveTypeFlags.NA);
   }
   if ((flag & ts.TypeFlags.Boolean) === ts.TypeFlags.Boolean) {
-    return DynamodbPrimitiveTypes.Boolean;
+    return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Boolean, DynamodbPrimitiveTypeFlags.NA);
   }
   if ((flag & ts.TypeFlags.Unknown) === ts.TypeFlags.Unknown) {
-    return DynamodbPrimitiveTypes.Null;
+    return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Null, DynamodbPrimitiveTypeFlags.NA);
   }
   return undefined;
 }
 
-export function dynamodbPrimitiveTypeFromName(typeName: string | undefined): DynamodbPrimitiveTypes | undefined {
+export function dynamodbPrimitiveTypeFromName(typeName: string | undefined): DynamodbPrimitiveType | undefined {
   if (typeName === undefined) {
     return undefined;
   }
@@ -39,16 +55,17 @@ export function dynamodbPrimitiveTypeFromName(typeName: string | undefined): Dyn
 
   switch (typeName) {
     case 'string':
-      return DynamodbPrimitiveTypes.String;
+      return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.String, DynamodbPrimitiveTypeFlags.NA);
     case 'number':
+      return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Number, DynamodbPrimitiveTypeFlags.NA);
     case 'BigInt':
-      return DynamodbPrimitiveTypes.Number;
+      return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Number, DynamodbPrimitiveTypeFlags.BigInt);
     case 'boolean':
-      return DynamodbPrimitiveTypes.Boolean;
+      return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Boolean, DynamodbPrimitiveTypeFlags.NA);
     case 'unknown':
-      return DynamodbPrimitiveTypes.Null;
+      return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Null, DynamodbPrimitiveTypeFlags.NA);
     case 'Uint8Array':
-      return DynamodbPrimitiveTypes.Binary;
+      return new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Binary, DynamodbPrimitiveTypeFlags.NA);
     default:
       return undefined;
   }
@@ -60,22 +77,24 @@ export interface DynamodbPrimitiveValueToJSValueConvertingOp {
 }
 
 export function dynamodbPrimitiveValueToJSValueConvertingOp(
-  primitiveType: DynamodbPrimitiveTypes,
+  primitiveType: DynamodbPrimitiveType,
 ): DynamodbPrimitiveValueToJSValueConvertingOp {
-  switch (primitiveType) {
-    case DynamodbPrimitiveTypes.Number:
+  switch (primitiveType.kind) {
+    case DynamodbPrimitiveTypeKinds.Number:
       return {
         leftOp: '(() => { const numStr = ',
-        rightOp: '; return numStr === undefined ? undefined : Number(numStr); })()',
+        rightOp: `; return numStr === undefined ? undefined : ${
+          primitiveType.isBigInt() ? 'BigInt' : 'Number'
+        }(numStr); })()`,
       };
-    case DynamodbPrimitiveTypes.Null:
+    case DynamodbPrimitiveTypeKinds.Null:
       return {
         leftOp: '(',
         rightOp: ' === true ? null : undefined)',
       };
-    case DynamodbPrimitiveTypes.String:
-    case DynamodbPrimitiveTypes.Binary:
-    case DynamodbPrimitiveTypes.Boolean:
+    case DynamodbPrimitiveTypeKinds.String:
+    case DynamodbPrimitiveTypeKinds.Binary:
+    case DynamodbPrimitiveTypeKinds.Boolean:
     default:
       return {
         leftOp: '',

@@ -1,8 +1,10 @@
 import ts from 'typescript';
 import {
-  DynamodbPrimitiveTypes,
+  DynamodbPrimitiveTypeKinds,
   dynamodbPrimitiveTypeFromTypeFlag,
   dynamodbPrimitiveTypeFromName,
+  DynamodbPrimitiveTypeFlags,
+  DynamodbPrimitiveType,
 } from './dynamodb_primitive_types';
 import {
   ArrayField,
@@ -69,10 +71,16 @@ export class FieldsCollector {
         if (valueType === undefined) {
           const valueTypeName = typeArgs[0]?.symbol?.name;
           if (valueTypeName === 'Uint8Array') {
-            return new ArrayField(propName, DynamodbPrimitiveTypes.Binary);
+            return new ArrayField(
+              propName,
+              new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Binary, DynamodbPrimitiveTypeFlags.NA),
+            );
           }
           if (valueTypeName === 'BigInt') {
-            return new ArrayField(propName, DynamodbPrimitiveTypes.Number);
+            return new ArrayField(
+              propName,
+              new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Number, DynamodbPrimitiveTypeFlags.BigInt),
+            );
           }
 
           const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
@@ -92,10 +100,18 @@ export class FieldsCollector {
         if (valueType === undefined) {
           const valueTypeName = typeArgs[0]?.symbol?.name;
           if (valueTypeName === 'Uint8Array') {
-            return new SetField(propName, DynamodbPrimitiveTypes.Binary, this.shouldLenientTypeCheck);
+            return new SetField(
+              propName,
+              new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Binary, DynamodbPrimitiveTypeFlags.NA),
+              this.shouldLenientTypeCheck,
+            );
           }
           if (valueTypeName === 'BigInt') {
-            return new SetField(propName, DynamodbPrimitiveTypes.Number, this.shouldLenientTypeCheck);
+            return new SetField(
+              propName,
+              new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Number, DynamodbPrimitiveTypeFlags.BigInt),
+              this.shouldLenientTypeCheck,
+            );
           }
 
           const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: ${valueTypeName}`;
@@ -126,10 +142,20 @@ export class FieldsCollector {
         if (valueType === undefined) {
           const valueTypeName = typeArgs[1]?.symbol?.name;
           if (valueTypeName === 'Uint8Array') {
-            return new MapField(propName, keyType, DynamodbPrimitiveTypes.Binary, this.shouldLenientTypeCheck);
+            return new MapField(
+              propName,
+              keyType,
+              new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Binary, DynamodbPrimitiveTypeFlags.NA),
+              this.shouldLenientTypeCheck,
+            );
           }
           if (valueTypeName === 'BigInt') {
-            return new MapField(propName, keyType, DynamodbPrimitiveTypes.Number, this.shouldLenientTypeCheck);
+            return new MapField(
+              propName,
+              keyType,
+              new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Number, DynamodbPrimitiveTypeFlags.BigInt),
+              this.shouldLenientTypeCheck,
+            );
           }
 
           const msg = `a property "${propName}" of the type "${typeName}" has unsupported type: "${valueTypeName}"`;
@@ -173,7 +199,10 @@ export class FieldsCollector {
 
       // primitive types
       if (valueDeclSymbolName === 'Uint8Array') {
-        return new PrimitiveField(propName, DynamodbPrimitiveTypes.Binary);
+        return new PrimitiveField(
+          propName,
+          new DynamodbPrimitiveType(DynamodbPrimitiveTypeKinds.Binary, DynamodbPrimitiveTypeFlags.NA),
+        );
       }
 
       let colonTokenCame = false;

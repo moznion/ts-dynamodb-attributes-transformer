@@ -204,4 +204,31 @@ describe('from dynamodb record transform', () => {
       null: null,
     });
   });
+
+  test('support BigInt', () => {
+    interface Interface {
+      readonly bigint: BigInt;
+      readonly bigintSlice: BigInt[];
+      readonly bigintArray: Array<BigInt>;
+      readonly bigintSet: Set<BigInt>;
+      readonly mapToBigint: Map<string, BigInt>;
+      readonly kvMapToBigint: { [key: string]: BigInt };
+    }
+
+    const got = fromDynamodbRecord<Interface>({
+      bigint: { N: '123' },
+      bigintSlice: { L: [{ N: '123' }, { N: '234' }] },
+      bigintArray: { L: [{ N: '345' }, { N: '456' }] },
+      bigintSet: { NS: ['567', '678'] },
+      mapToBigint: { M: { bigint: { N: '789' } } },
+      kvMapToBigint: { M: { bigint: { N: '890' } } },
+    });
+    expect(got.bigint).toEqual(BigInt(123));
+    expect(got.bigintSlice).toEqual([BigInt(123), BigInt(234)]);
+    expect(got.bigintArray).toEqual(new Array<BigInt>(BigInt(345), BigInt(456)));
+    expect(got.bigintSet).toContain(BigInt(567));
+    expect(got.bigintSet).toContain(BigInt(678));
+    expect(got.mapToBigint).toEqual(new Map([['bigint', BigInt(789)]]));
+    expect(got.kvMapToBigint).toEqual({ bigint: BigInt(890) });
+  });
 });
