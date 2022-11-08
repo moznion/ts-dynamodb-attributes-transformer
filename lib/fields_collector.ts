@@ -17,13 +17,15 @@ import { warn } from './logger';
 export class FieldsCollector {
   constructor(private readonly funcName: string, private readonly shouldLenientTypeCheck: boolean) {}
 
-  public collectFields(node: ts.CallExpression, typeChecker: ts.TypeChecker): (DynamodbItemField | undefined)[] {
+  public collectFields(
+    node: ts.CallExpression,
+    typeChecker: ts.TypeChecker,
+    typeName: string,
+    type: ts.Type,
+  ): (DynamodbItemField | undefined)[] {
     if (node.typeArguments === undefined || node.typeArguments.length !== 1 || !node.typeArguments[0]) {
       throw new Error(`No type argument on ${this.funcName}(). Please put a type argument on the function`);
     }
-
-    const typ = node.typeArguments[0];
-    const typeName = typ.getText();
 
     if (node.arguments.length !== 1 || !node.arguments[0]) {
       throw new Error(
@@ -31,7 +33,6 @@ export class FieldsCollector {
       );
     }
 
-    const type = typeChecker.getTypeFromTypeNode(typ);
     const properties = typeChecker.getPropertiesOfType(type);
     return properties.map((prop): DynamodbItemField | undefined => {
       if (

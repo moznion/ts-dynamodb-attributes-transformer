@@ -12,10 +12,23 @@ export class FromDynamodbRecordTransformer {
       );
     }
 
-    const typeName = node.typeArguments[0].getText();
+    const typeArg = node.typeArguments[0];
+    const typeName = typeArg.getText();
     if (node.arguments.length !== 1 || !node.arguments[0]) {
       throw new Error(
         `No argument on ${FromDynamodbRecordTransformer.funcName}(). Please put an argument that has ${typeName} type on the function`,
+      );
+    }
+
+    const type = typeChecker.getTypeFromTypeNode(typeArg);
+    if (!type.isClassOrInterface()) {
+      throw new Error(
+        `A type parameter of ${FromDynamodbRecordTransformer.funcName}() must be interface, but ${typeName} is not`,
+      );
+    }
+    if (type.isClass()) {
+      throw new Error(
+        `A type parameter of ${FromDynamodbRecordTransformer.funcName}() must be interface, but ${typeName} is a class`,
       );
     }
 
@@ -24,7 +37,7 @@ export class FromDynamodbRecordTransformer {
       FromDynamodbRecordTransformer.funcName,
       FromDynamodbRecordTransformer.shouldLenientTypeCheck,
     )
-      .collectFields(node, typeChecker)
+      .collectFields(node, typeChecker, typeName, type)
       .map(field => {
         return field?.generateCodeForUnmarshal(argVarNameIdent.text);
       })

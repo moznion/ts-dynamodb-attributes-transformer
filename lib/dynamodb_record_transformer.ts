@@ -12,10 +12,18 @@ export class DynamodbRecordTransformer {
       );
     }
 
-    const typeName = node.typeArguments[0].getText();
+    const typeArg = node.typeArguments[0];
+    const typeName = typeArg.getText();
     if (node.arguments.length !== 1 || !node.arguments[0]) {
       throw new Error(
         `No argument on ${DynamodbRecordTransformer.funcName}(). Please put an argument that has ${typeName} type on the function`,
+      );
+    }
+
+    const type = typeChecker.getTypeFromTypeNode(typeArg);
+    if (!type.isClassOrInterface()) {
+      throw new Error(
+        `A type parameter of ${DynamodbRecordTransformer.funcName}() must be class or interface, but ${typeName} is not`,
       );
     }
 
@@ -24,7 +32,7 @@ export class DynamodbRecordTransformer {
       DynamodbRecordTransformer.funcName,
       DynamodbRecordTransformer.shouldLenientTypeCheck,
     )
-      .collectFields(node, typeChecker)
+      .collectFields(node, typeChecker, typeName, type)
       .map(field => {
         return field?.generateCode(argVarNameIdent.text);
       })

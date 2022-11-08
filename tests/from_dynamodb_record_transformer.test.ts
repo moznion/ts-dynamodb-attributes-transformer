@@ -2,7 +2,7 @@ import { describe, expect, test } from '@jest/globals';
 import { fromDynamodbRecord } from '../index';
 
 describe('from dynamodb record transform', () => {
-  test('TODO', () => {
+  test('should unmarshal the attributes into arbitrary interface instance', () => {
     interface Interface {
       publicNum: number;
       readonly readonlyNum: number;

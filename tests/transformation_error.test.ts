@@ -19,6 +19,22 @@ describe('dynamodb record transformation errors', () => {
     );
   });
 
+  test('should raise error when the type parameter is not class and interface', async () => {
+    const err = await new Promise<ExecException | null>(resolve => {
+      child_process.exec(
+        'NODE_NO_WARNINGS=true TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK= npx ts-node -C ttypescript ./tests/transformation_error_src/object_literal_type_parameter.ts',
+        err => {
+          resolve(err);
+        },
+      );
+    });
+
+    expect(err).not.toBeNull();
+    expect(err?.message).toMatch(
+      /Error: A type parameter of dynamodbRecord\(\) must be class or interface, but \{\} is not/,
+    );
+  });
+
   test('should raise error when the argument is missing', async () => {
     const err = await new Promise<ExecException | null>(resolve => {
       child_process.exec(
