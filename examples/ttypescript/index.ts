@@ -1,4 +1,4 @@
-import { dynamodbRecord } from '@moznion/ts-dynamodb-attributes-transformer';
+import { dynamodbRecord, fromDynamodbRecord } from '../../index';
 import { AttributeValue } from '@aws-sdk/client-dynamodb';
 
 interface User {
@@ -15,5 +15,7 @@ const record: Record<keyof User, AttributeValue> = dynamodbRecord<User>({
     ['buz', 'qux'],
   ]),
 });
-
 console.log(JSON.stringify(record));
+
+const user: User = fromDynamodbRecord<User>(record);
+console.log(user);

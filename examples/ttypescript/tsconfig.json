@@ -9,7 +9,7 @@
 
     "plugins": [
       {
-        "transform": "@moznion/ts-dynamodb-attributes-transformer/transformer"
+        "transform": "../../transformer"
       }
     ]
   }

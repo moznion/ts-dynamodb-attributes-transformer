@@ -1,26 +1,31 @@
 import ts from 'typescript';
-import { DynamodbPrimitiveTypes } from './dynamodb_primitive_types';
+import {
+  DynamodbPrimitiveTypeKinds,
+  DynamodbPrimitiveType,
+  dynamodbPrimitiveValueToJSValueConvertingOp,
+} from './dynamodb_primitive_types';
 import { warn } from './logger';
 
 export interface DynamodbItemField {
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined;
+  generateCodeForUnmarshal(argName: string): ts.ObjectLiteralElementLike | undefined;
 }
 
 export class PrimitiveField implements DynamodbItemField {
-  constructor(private readonly fieldName: string, private readonly fieldType: DynamodbPrimitiveTypes) {}
+  constructor(private readonly fieldName: string, private readonly fieldType: DynamodbPrimitiveType) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
-    const toStr = this.fieldType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';
+    const toStr = this.fieldType.kind === DynamodbPrimitiveTypeKinds.Number ? '.toString()' : '';
 
     return ts.factory.createPropertyAssignment(
       this.fieldName,
       ts.factory.createObjectLiteralExpression(
         [
           ts.factory.createPropertyAssignment(
-            this.fieldType,
+            this.fieldType.kind,
             ts.factory.createIdentifier(
               `${argName}.${this.fieldName}${toStr}` +
-                (this.fieldType === DynamodbPrimitiveTypes.Null ? ' === null' : ''),
+                (this.fieldType.kind === DynamodbPrimitiveTypeKinds.Null ? ' === null' : ''),
             ),
           ),
         ],
@@ -28,13 +33,23 @@ export class PrimitiveField implements DynamodbItemField {
       ),
     );
   }
+
+  generateCodeForUnmarshal(argName: string): ts.ObjectLiteralElementLike | undefined {
+    const valueConvertingOp = dynamodbPrimitiveValueToJSValueConvertingOp(this.fieldType);
+    return ts.factory.createPropertyAssignment(
+      this.fieldName,
+      ts.factory.createIdentifier(
+        `${valueConvertingOp.leftOp}${argName}['${this.fieldName}']?.${this.fieldType.kind}${valueConvertingOp.rightOp}`,
+      ),
+    );
+  }
 }
 
 export class ArrayField implements DynamodbItemField {
-  constructor(readonly fieldName: string, readonly valueType: DynamodbPrimitiveTypes) {}
+  constructor(readonly fieldName: string, readonly valueType: DynamodbPrimitiveType) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
-    const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';
+    const toStr = this.valueType.kind === DynamodbPrimitiveTypeKinds.Number ? '.toString()' : '';
 
     return ts.factory.createPropertyAssignment(
       this.fieldName,
@@ -43,11 +58,21 @@ export class ArrayField implements DynamodbItemField {
           ts.factory.createPropertyAssignment(
             'L',
             ts.factory.createIdentifier(
-              `${argName}.${this.fieldName}.map(v => new Object({${this.valueType}: v${toStr}}))`,
+              `${argName}.${this.fieldName}.map(v => new Object({${this.valueType.kind}: v${toStr}}))`,
             ),
           ),
         ],
         true,
+      ),
+    );
+  }
+
+  generateCodeForUnmarshal(argName: string): ts.ObjectLiteralElementLike | undefined {
+    const valueConvertingOp = dynamodbPrimitiveValueToJSValueConvertingOp(this.valueType);
+    return ts.factory.createPropertyAssignment(
+      this.fieldName,
+      ts.factory.createIdentifier(
+        `${argName}['${this.fieldName}']?.L?.map(v => ${valueConvertingOp.leftOp}v.${this.valueType.kind}${valueConvertingOp.rightOp}) || []`,
       ),
     );
   }
@@ -56,15 +81,15 @@ export class ArrayField implements DynamodbItemField {
 export class SetField implements DynamodbItemField {
   constructor(
     readonly fieldName: string,
-    readonly valueType: DynamodbPrimitiveTypes,
+    readonly valueType: DynamodbPrimitiveType,
     readonly shouldLenientTypeCheck: boolean,
   ) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
     if (
-      this.valueType !== DynamodbPrimitiveTypes.String &&
-      this.valueType !== DynamodbPrimitiveTypes.Number &&
-      this.valueType !== DynamodbPrimitiveTypes.Binary
+      this.valueType.kind !== DynamodbPrimitiveTypeKinds.String &&
+      this.valueType.kind !== DynamodbPrimitiveTypeKinds.Number &&
+      this.valueType.kind !== DynamodbPrimitiveTypeKinds.Binary
     ) {
       const msg = `a type parameter of the Set type property "${this.fieldName}" is unsupported one`;
       if (this.shouldLenientTypeCheck) {
@@ -73,18 +98,28 @@ export class SetField implements DynamodbItemField {
       }
       throw new Error(msg);
     }
-    const mapToStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.map(v => `${v}`)' : '';
+    const mapToStr = this.valueType.kind === DynamodbPrimitiveTypeKinds.Number ? '.map(v => v.toString())' : '';
 
     return ts.factory.createPropertyAssignment(
       this.fieldName,
       ts.factory.createObjectLiteralExpression(
         [
           ts.factory.createPropertyAssignment(
-            this.valueType + 'S',
+            this.valueType.kind + 'S',
             ts.factory.createIdentifier(`Array.from(${argName}.${this.fieldName}.values())${mapToStr}`),
           ),
         ],
         true,
+      ),
+    );
+  }
+
+  generateCodeForUnmarshal(argName: string): ts.ObjectLiteralElementLike | undefined {
+    const valueConvertingOp = dynamodbPrimitiveValueToJSValueConvertingOp(this.valueType);
+    return ts.factory.createPropertyAssignment(
+      this.fieldName,
+      ts.factory.createIdentifier(
+        `${argName}['${this.fieldName}']?.${this.valueType.kind}S?.map(v => ${valueConvertingOp.leftOp}v${valueConvertingOp.rightOp}) || new Set()`,
       ),
     );
   }
@@ -93,13 +128,13 @@ export class SetField implements DynamodbItemField {
 export class MapField implements DynamodbItemField {
   constructor(
     readonly fieldName: string,
-    readonly keyValueType: DynamodbPrimitiveTypes,
-    readonly valueType: DynamodbPrimitiveTypes,
+    readonly keyValueType: DynamodbPrimitiveType,
+    readonly valueType: DynamodbPrimitiveType,
     readonly shouldLenientTypeCheck: boolean,
   ) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
-    if (this.keyValueType !== DynamodbPrimitiveTypes.String) {
+    if (this.keyValueType.kind !== DynamodbPrimitiveTypeKinds.String) {
       const msg = `a Map type property "${this.fieldName}" has non-string key type`;
       if (this.shouldLenientTypeCheck) {
         warn(msg);
@@ -108,7 +143,7 @@ export class MapField implements DynamodbItemField {
       throw new Error(msg);
     }
 
-    const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';
+    const toStr = this.valueType.kind === DynamodbPrimitiveTypeKinds.Number ? '.toString()' : '';
     const recordIdent = ts.factory.createIdentifier('m');
 
     return ts.factory.createPropertyAssignment(
@@ -137,9 +172,10 @@ export class MapField implements DynamodbItemField {
                     ts.SyntaxKind.EqualsToken,
                     ts.factory.createObjectLiteralExpression([
                       ts.factory.createPropertyAssignment(
-                        this.valueType,
+                        this.valueType.kind,
                         ts.factory.createIdentifier(
-                          `kv[1]${toStr}` + (this.valueType === DynamodbPrimitiveTypes.Null ? ' === null' : ''),
+                          `kv[1]${toStr}` +
+                            (this.valueType.kind === DynamodbPrimitiveTypeKinds.Null ? ' === null' : ''),
                         ),
                       ),
                     ]),
@@ -154,18 +190,55 @@ export class MapField implements DynamodbItemField {
       ),
     );
   }
+
+  generateCodeForUnmarshal(argName: string): ts.ObjectLiteralElementLike | undefined {
+    const valueIdent = ts.factory.createIdentifier('m');
+    const recordIdent = ts.factory.createIdentifier('r');
+
+    const valueConvertingOp = dynamodbPrimitiveValueToJSValueConvertingOp(this.valueType);
+
+    return ts.factory.createPropertyAssignment(
+      this.fieldName,
+      ts.factory.createImmediatelyInvokedFunctionExpression([
+        ts.factory.createVariableStatement(
+          [],
+          [ts.factory.createVariableDeclaration(valueIdent), ts.factory.createVariableDeclaration(recordIdent)],
+        ),
+        ts.factory.createBinaryExpression(
+          valueIdent,
+          ts.SyntaxKind.EqualsToken,
+          ts.factory.createIdentifier(`new Map()`),
+        ),
+        ts.factory.createBinaryExpression(
+          recordIdent,
+          ts.SyntaxKind.EqualsToken,
+          ts.factory.createIdentifier(`${argName}['${this.fieldName}']?.M`),
+        ),
+        ts.factory.createForInStatement(
+          ts.factory.createVariableDeclarationList([ts.factory.createVariableDeclaration('k')], ts.NodeFlags.Const),
+          recordIdent,
+          ts.factory.createBlock([
+            ts.factory.createIdentifier(
+              `${valueIdent.text}.set(k, ${valueConvertingOp.leftOp}${recordIdent.text}[k]?.${this.valueType.kind}${valueConvertingOp.rightOp})`,
+            ),
+          ] as unknown as ts.Statement[]),
+        ),
+        ts.factory.createReturnStatement(valueIdent),
+      ] as ts.Statement[]),
+    );
+  }
 }
 
 export class KeyValuePairMapField implements DynamodbItemField {
   constructor(
     readonly fieldName: string,
-    readonly keyValueType: DynamodbPrimitiveTypes,
-    readonly valueType: DynamodbPrimitiveTypes,
+    readonly keyValueType: DynamodbPrimitiveType,
+    readonly valueType: DynamodbPrimitiveType,
     readonly shouldLenientTypeCheck: boolean,
   ) {}
 
   generateCode(argName: string): ts.ObjectLiteralElementLike | undefined {
-    if (this.keyValueType !== DynamodbPrimitiveTypes.String) {
+    if (this.keyValueType.kind !== DynamodbPrimitiveTypeKinds.String) {
       const msg = `a Map type property "${this.fieldName}" has non-string key type`;
       if (this.shouldLenientTypeCheck) {
         warn(msg);
@@ -174,7 +247,7 @@ export class KeyValuePairMapField implements DynamodbItemField {
       throw new Error(msg);
     }
 
-    const toStr = this.valueType === DynamodbPrimitiveTypes.Number ? '.toString()' : '';
+    const toStr = this.valueType.kind === DynamodbPrimitiveTypeKinds.Number ? '.toString()' : '';
     const recordIdent = ts.factory.createIdentifier('m');
 
     return ts.factory.createPropertyAssignment(
@@ -202,10 +275,10 @@ export class KeyValuePairMapField implements DynamodbItemField {
                     ts.SyntaxKind.EqualsToken,
                     ts.factory.createObjectLiteralExpression([
                       ts.factory.createPropertyAssignment(
-                        this.valueType,
+                        this.valueType.kind,
                         ts.factory.createIdentifier(
                           `${argName}.${this.fieldName}[k]${toStr}` +
-                            (this.valueType === DynamodbPrimitiveTypes.Null ? ' === null' : ''),
+                            (this.valueType.kind === DynamodbPrimitiveTypeKinds.Null ? ' === null' : ''),
                         ),
                       ),
                     ]),
@@ -218,6 +291,43 @@ export class KeyValuePairMapField implements DynamodbItemField {
         ],
         true,
       ),
+    );
+  }
+
+  generateCodeForUnmarshal(argName: string): ts.ObjectLiteralElementLike | undefined {
+    const valueIdent = ts.factory.createIdentifier('m');
+    const recordIdent = ts.factory.createIdentifier('r');
+
+    const valueConvertingOp = dynamodbPrimitiveValueToJSValueConvertingOp(this.valueType);
+
+    return ts.factory.createPropertyAssignment(
+      this.fieldName,
+      ts.factory.createImmediatelyInvokedFunctionExpression([
+        ts.factory.createVariableStatement(
+          [],
+          [ts.factory.createVariableDeclaration(valueIdent), ts.factory.createVariableDeclaration(recordIdent)],
+        ),
+        ts.factory.createBinaryExpression(valueIdent, ts.SyntaxKind.EqualsToken, ts.factory.createIdentifier('{}')),
+        ts.factory.createBinaryExpression(
+          recordIdent,
+          ts.SyntaxKind.EqualsToken,
+          ts.factory.createIdentifier(`${argName}['${this.fieldName}']?.M`),
+        ),
+        ts.factory.createForInStatement(
+          ts.factory.createVariableDeclarationList([ts.factory.createVariableDeclaration('k')], ts.NodeFlags.Const),
+          recordIdent,
+          ts.factory.createBlock([
+            ts.factory.createBinaryExpression(
+              ts.factory.createIdentifier(`${valueIdent.text}[k]`),
+              ts.SyntaxKind.EqualsToken,
+              ts.factory.createIdentifier(
+                `${valueConvertingOp.leftOp}${recordIdent.text}[k]?.${this.valueType.kind}${valueConvertingOp.rightOp}`,
+              ),
+            ),
+          ] as unknown as ts.Statement[]),
+        ),
+        ts.factory.createReturnStatement(valueIdent),
+      ] as ts.Statement[]),
     );
   }
 }

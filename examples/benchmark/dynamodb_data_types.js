@@ -15,4 +15,29 @@ function toDynamoDBRecord() {
   AttributeValue.wrap(obj);
 }
 
-module.exports = toDynamoDBRecord;
+function fromDynamoDBRecord() {
+  AttributeValue.unwrap({
+    id: {
+      N: '123455',
+    },
+    name: {
+      S: 'John Doe',
+    },
+    tags: {
+      M: {
+        foo: {
+          S: 'bar',
+        },
+        buz: {
+          S: 'qux',
+        },
+      },
+    },
+    flags: {
+      SS: ['foo', 'bar'],
+    },
+  });
+}
+
+module.exports.toDynamoDBRecord = toDynamoDBRecord;
+module.exports.fromDynamoDBRecord = fromDynamoDBRecord;

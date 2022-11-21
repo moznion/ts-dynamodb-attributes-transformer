@@ -14,6 +14,8 @@ describe('dynamodb record transform', () => {
         readonly nil: unknown,
         readonly stringSlice: string[],
         readonly stringArray: Array<string>,
+        readonly numSlice: number[],
+        readonly numArray: Array<number>,
         readonly numSet: Set<number>,
         readonly stringSet: Set<string>,
         readonly bytesSet: Set<Uint8Array>,
@@ -40,6 +42,8 @@ describe('dynamodb record transform', () => {
         null,
         ['slice', 'str'],
         new Array<string>('array', 'str'),
+        [123, 234],
+        new Array<number>(345, 456),
         new Set<number>([123, 234]),
         new Set<string>(['set', 'str']),
         new Set<Uint8Array>([new TextEncoder().encode('set'), new TextEncoder().encode('bytes')]),
@@ -81,9 +85,10 @@ describe('dynamodb record transform', () => {
           null: null,
         },
       ),
+      true,
     );
 
-    expect(Object.keys(record)).toHaveLength(21);
+    expect(Object.keys(record)).toHaveLength(23);
     expect(record['publicNum']).toEqual({ N: '123' });
     expect(record['readonlyNum']).toEqual({ N: '234' });
     expect(record['string']).toEqual({ S: 'str' });
@@ -92,6 +97,8 @@ describe('dynamodb record transform', () => {
     expect(record['nil']).toEqual({ NULL: true });
     expect(record['stringSlice']).toEqual({ L: [{ S: 'slice' }, { S: 'str' }] });
     expect(record['stringArray']).toEqual({ L: [{ S: 'array' }, { S: 'str' }] });
+    expect(record['numSlice']).toEqual({ L: [{ N: '123' }, { N: '234' }] });
+    expect(record['numArray']).toEqual({ L: [{ N: '345' }, { N: '456' }] });
     expect(record['numSet']).toEqual({ NS: ['123', '234'] });
     expect(record['stringSet']).toEqual({ SS: ['set', 'str'] });
     expect(record['bytesSet']).toEqual({ BS: [new TextEncoder().encode('set'), new TextEncoder().encode('bytes')] });
@@ -201,7 +208,7 @@ describe('dynamodb record transform', () => {
       constructor(private privateString: string, justArgument: string) {}
     }
 
-    const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar'));
+    const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar'), true);
     expect(Object.keys(record)).toHaveLength(0);
   });
 
@@ -232,6 +239,7 @@ describe('dynamodb record transform', () => {
         { 123: 321 },
         {},
       ),
+      true,
     );
     expect(Object.keys(record)).toHaveLength(0);
   });
@@ -256,6 +264,7 @@ describe('dynamodb record transform', () => {
         new Map([['bigint', BigInt(789)]]),
         { bigint: BigInt(890) },
       ),
+      true,
     );
     expect(record['bigint']).toEqual({ N: '123' });
     expect(record['bigintSlice']).toEqual({ L: [{ N: '123' }, { N: '234' }] });
@@ -272,14 +281,17 @@ describe('dynamodb record transform', () => {
       readonly name: string;
       readonly tags: Map<string, string>;
     }
-    const record: Record<keyof Interface, AttributeValue> = dynamodbRecord<Interface>({
-      id: 12345,
-      name: 'John Doe',
-      tags: new Map<string, string>([
-        ['foo', 'bar'],
-        ['buz', 'qux'],
-      ]),
-    });
+    const record: Record<keyof Interface, AttributeValue> = dynamodbRecord<Interface>(
+      {
+        id: 12345,
+        name: 'John Doe',
+        tags: new Map<string, string>([
+          ['foo', 'bar'],
+          ['buz', 'qux'],
+        ]),
+      },
+      true,
+    );
     expect(record['id']).toEqual({ N: '12345' });
     expect(record['name']).toEqual({ S: 'John Doe' });
     expect(record['tags']).toEqual({ M: { foo: { S: 'bar' }, buz: { S: 'qux' } } });
@@ -298,6 +310,7 @@ describe('dynamodb record transform', () => {
     {
       const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(
         new Clazz(undefined, undefined, undefined),
+        true,
       );
       expect(record['optionalStr1']).toEqual({ S: undefined });
       expect(record['optionalStr2']).toEqual({ S: undefined });
@@ -305,7 +318,7 @@ describe('dynamodb record transform', () => {
     }
 
     {
-      const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar', 'buz'));
+      const record: Record<keyof Clazz, AttributeValue> = dynamodbRecord<Clazz>(new Clazz('foo', 'bar', 'buz'), true);
       expect(record['optionalStr1']).toEqual({ S: 'foo' });
       expect(record['optionalStr2']).toEqual({ S: 'bar' });
       expect(record['optionalStr3']).toEqual({ S: 'buz' });
