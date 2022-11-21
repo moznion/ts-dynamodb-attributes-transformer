@@ -7,13 +7,13 @@ Code transformer plugin powered by [TypeScript Compiler API](https://github.com/
 This plugin replaces the TypeScript function invocation with the generated object code. In short, this plugin generates the code for every property of type `T`.
 
 
-### `dynamodbRecord<T>(obj: T): Record<keyof T, AttributeValue>`
+### `dynamodbRecord<T>(obj: T, shouldLenientTypeCheck?: boolean): Record<keyof T, AttributeValue>`
 
 This plugin replaces `dynamodbRecord<T>(obj: T)` invocation with `Record<keyof T, AttributeValue>` value that is defined in aws-sdk-js-v3 according to the type `T` and the contents of the object.
 
 This plugin powers the users can do drop-in replacements for the existing `Record<keyof T, AttributeValue>` value and/or the generator with `dynamodbRecord<T>(obj: T)` function.
 
-### `fromDynamodbRecord<T>(attrs: Record<string, AttributeValue>): T`
+### `fromDynamodbRecord<T>(attrs: Record<string, AttributeValue>, shouldLenientTypeCheck?: boolean): T`
 
 This replaces `fromDynamodbRecord<T>(attrs: Record<string, AttributeValue>)` invocation with the object which has type `T`. This method is responsible to translate the DynamoDB attributes to the actual TypeScript object, i.e. unmarshalling.
 
