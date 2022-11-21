@@ -29,7 +29,7 @@ export class FieldsCollector {
       throw new Error(`No type argument on ${this.funcName}(). Please put a type argument on the function`);
     }
 
-    if (node.arguments.length !== 1 || !node.arguments[0]) {
+    if (node.arguments.length < 1 || !node.arguments[0]) {
       throw new Error(
         `No argument on ${this.funcName}(). Please put an argument that has ${typeName} type on the function`,
       );

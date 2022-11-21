@@ -29,119 +29,122 @@ describe('from dynamodb record transform', () => {
       readonly kvMapToNull: { [key: string]: unknown };
     }
 
-    const got = fromDynamodbRecord<Interface>({
-      publicNum: { N: '123' },
-      readonlyNum: { N: '234' },
-      string: { S: 'str' },
-      bytes: { B: new TextEncoder().encode('bytes') },
-      bool: { BOOL: true },
-      nil: { NULL: true },
-      stringSlice: { L: [{ S: 'slice' }, { S: 'str' }] },
-      stringArray: { L: [{ S: 'array' }, { S: 'str' }] },
-      numSlice: { L: [{ N: '123' }, { N: '234' }] },
-      numArray: { L: [{ N: '345' }, { N: '456' }] },
-      numSet: { NS: ['123', '234'] },
-      stringSet: { SS: ['set', 'str'] },
-      bytesSet: { BS: [new TextEncoder().encode('set'), new TextEncoder().encode('bytes')] },
-      mapToNum: {
-        M: {
-          mapTo: { N: '123' },
-          num: {
-            N: '234',
+    const got = fromDynamodbRecord<Interface>(
+      {
+        publicNum: { N: '123' },
+        readonlyNum: { N: '234' },
+        string: { S: 'str' },
+        bytes: { B: new TextEncoder().encode('bytes') },
+        bool: { BOOL: true },
+        nil: { NULL: true },
+        stringSlice: { L: [{ S: 'slice' }, { S: 'str' }] },
+        stringArray: { L: [{ S: 'array' }, { S: 'str' }] },
+        numSlice: { L: [{ N: '123' }, { N: '234' }] },
+        numArray: { L: [{ N: '345' }, { N: '456' }] },
+        numSet: { NS: ['123', '234'] },
+        stringSet: { SS: ['set', 'str'] },
+        bytesSet: { BS: [new TextEncoder().encode('set'), new TextEncoder().encode('bytes')] },
+        mapToNum: {
+          M: {
+            mapTo: { N: '123' },
+            num: {
+              N: '234',
+            },
+          },
+        },
+        mapToString: {
+          M: {
+            mapTo: {
+              S: 'foo',
+            },
+            str: {
+              S: 'bar',
+            },
+          },
+        },
+        mapToBytes: {
+          M: {
+            mapTo: {
+              B: new TextEncoder().encode('foo'),
+            },
+            bytes: {
+              B: new TextEncoder().encode('bar'),
+            },
+          },
+        },
+        mapToBool: {
+          M: {
+            mapTo: {
+              BOOL: true,
+            },
+            bool: {
+              BOOL: false,
+            },
+          },
+        },
+        mapToNull: {
+          M: {
+            mapTo: {
+              NULL: false,
+            },
+            null: {
+              NULL: true,
+            },
+          },
+        },
+        kvMapToNum: {
+          M: {
+            kvMapTo: {
+              N: '123',
+            },
+            num: {
+              N: '234',
+            },
+          },
+        },
+        kvMapToString: {
+          M: {
+            kvMapTo: {
+              S: 'foo',
+            },
+            str: {
+              S: 'bar',
+            },
+          },
+        },
+        kvMapToBytes: {
+          M: {
+            kvMapTo: {
+              B: new TextEncoder().encode('foo'),
+            },
+            bytes: {
+              B: new TextEncoder().encode('bar'),
+            },
+          },
+        },
+        kvMapToBool: {
+          M: {
+            kvMapTo: {
+              BOOL: true,
+            },
+            bool: {
+              BOOL: false,
+            },
+          },
+        },
+        kvMapToNull: {
+          M: {
+            kvMapTo: {
+              NULL: false,
+            },
+            null: {
+              NULL: true,
+            },
           },
         },
       },
-      mapToString: {
-        M: {
-          mapTo: {
-            S: 'foo',
-          },
-          str: {
-            S: 'bar',
-          },
-        },
-      },
-      mapToBytes: {
-        M: {
-          mapTo: {
-            B: new TextEncoder().encode('foo'),
-          },
-          bytes: {
-            B: new TextEncoder().encode('bar'),
-          },
-        },
-      },
-      mapToBool: {
-        M: {
-          mapTo: {
-            BOOL: true,
-          },
-          bool: {
-            BOOL: false,
-          },
-        },
-      },
-      mapToNull: {
-        M: {
-          mapTo: {
-            NULL: false,
-          },
-          null: {
-            NULL: true,
-          },
-        },
-      },
-      kvMapToNum: {
-        M: {
-          kvMapTo: {
-            N: '123',
-          },
-          num: {
-            N: '234',
-          },
-        },
-      },
-      kvMapToString: {
-        M: {
-          kvMapTo: {
-            S: 'foo',
-          },
-          str: {
-            S: 'bar',
-          },
-        },
-      },
-      kvMapToBytes: {
-        M: {
-          kvMapTo: {
-            B: new TextEncoder().encode('foo'),
-          },
-          bytes: {
-            B: new TextEncoder().encode('bar'),
-          },
-        },
-      },
-      kvMapToBool: {
-        M: {
-          kvMapTo: {
-            BOOL: true,
-          },
-          bool: {
-            BOOL: false,
-          },
-        },
-      },
-      kvMapToNull: {
-        M: {
-          kvMapTo: {
-            NULL: false,
-          },
-          null: {
-            NULL: true,
-          },
-        },
-      },
-    });
+      true,
+    );
 
     expect(got.publicNum).toEqual(123);
     expect(got.readonlyNum).toEqual(234);
@@ -215,14 +218,17 @@ describe('from dynamodb record transform', () => {
       readonly kvMapToBigint: { [key: string]: BigInt };
     }
 
-    const got = fromDynamodbRecord<Interface>({
-      bigint: { N: '123' },
-      bigintSlice: { L: [{ N: '123' }, { N: '234' }] },
-      bigintArray: { L: [{ N: '345' }, { N: '456' }] },
-      bigintSet: { NS: ['567', '678'] },
-      mapToBigint: { M: { bigint: { N: '789' } } },
-      kvMapToBigint: { M: { bigint: { N: '890' } } },
-    });
+    const got = fromDynamodbRecord<Interface>(
+      {
+        bigint: { N: '123' },
+        bigintSlice: { L: [{ N: '123' }, { N: '234' }] },
+        bigintArray: { L: [{ N: '345' }, { N: '456' }] },
+        bigintSet: { NS: ['567', '678'] },
+        mapToBigint: { M: { bigint: { N: '789' } } },
+        kvMapToBigint: { M: { bigint: { N: '890' } } },
+      },
+      true,
+    );
     expect(got.bigint).toEqual(BigInt(123));
     expect(got.bigintSlice).toEqual([BigInt(123), BigInt(234)]);
     expect(got.bigintArray).toEqual(new Array<BigInt>(BigInt(345), BigInt(456)));

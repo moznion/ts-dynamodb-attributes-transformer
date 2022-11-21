@@ -3,7 +3,6 @@ import { FieldsCollector } from './fields_collector';
 
 export class DynamodbRecordTransformer {
   public static readonly funcName = 'dynamodbRecord';
-  private static readonly shouldLenientTypeCheck = !!process.env['TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK']; // TODO
 
   public static visitNode(node: ts.CallExpression, typeChecker: ts.TypeChecker): ts.Node | undefined {
     if (node.typeArguments === undefined || node.typeArguments.length !== 1 || !node.typeArguments[0]) {
@@ -14,11 +13,13 @@ export class DynamodbRecordTransformer {
 
     const typeArg = node.typeArguments[0];
     const typeName = typeArg.getText();
-    if (node.arguments.length !== 1 || !node.arguments[0]) {
+    if (node.arguments.length < 1 || !node.arguments[0]) {
       throw new Error(
         `No argument on ${DynamodbRecordTransformer.funcName}(). Please put an argument that has ${typeName} type on the function`,
       );
     }
+
+    const shouldLenientTypeCheck = node.arguments[1]?.getText() === 'true';
 
     const type = typeChecker.getTypeFromTypeNode(typeArg);
     if (!type.isClassOrInterface()) {
@@ -28,10 +29,7 @@ export class DynamodbRecordTransformer {
     }
 
     const argVarNameIdent = ts.factory.createIdentifier('arg');
-    const objectProps = new FieldsCollector(
-      DynamodbRecordTransformer.funcName,
-      DynamodbRecordTransformer.shouldLenientTypeCheck,
-    )
+    const objectProps = new FieldsCollector(DynamodbRecordTransformer.funcName, shouldLenientTypeCheck)
       .collectFields(node, typeChecker, typeName, type)
       .map(field => {
         return field?.generateCode(argVarNameIdent.text);
