@@ -1,4 +1,4 @@
-import { dynamodbRecord } from '../../index';
+import { dynamodbRecord, fromDynamodbRecord } from '../../index';
 
 interface Obj {
   readonly id: number;
@@ -21,4 +21,28 @@ const obj: Obj = {
 
 export function toDynamoDBRecord() {
   dynamodbRecord<Obj>(obj);
+}
+
+export function fromDynamoDBRecord() {
+  fromDynamodbRecord<Obj>({
+    id: {
+      N: '123455',
+    },
+    name: {
+      S: 'John Doe',
+    },
+    tags: {
+      M: {
+        foo: {
+          S: 'bar',
+        },
+        buz: {
+          S: 'qux',
+        },
+      },
+    },
+    flags: {
+      SS: ['foo', 'bar'],
+    },
+  });
 }
