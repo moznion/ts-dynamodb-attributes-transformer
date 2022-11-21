@@ -237,4 +237,21 @@ describe('from dynamodb record transform', () => {
     expect(got.mapToBigint).toEqual(new Map([['bigint', BigInt(789)]]));
     expect(got.kvMapToBigint).toEqual({ bigint: BigInt(890) });
   });
+
+  test('for default values', () => {
+    interface Interface {
+      readonly num?: number;
+      readonly numArray: Array<number>;
+      readonly numSet: Set<number>;
+      readonly mapToNumber: Map<string, number>;
+      readonly kvMapToNumber: { [key: string]: number };
+    }
+
+    const got = fromDynamodbRecord<Interface>({});
+    expect(got.num).toBeUndefined();
+    expect(got.numArray).toEqual([]);
+    expect(got.numSet).toEqual(new Set());
+    expect(got.mapToNumber).toEqual(new Map());
+    expect(got.kvMapToNumber).toEqual({});
+  });
 });

@@ -72,7 +72,7 @@ export class ArrayField implements DynamodbItemField {
     return ts.factory.createPropertyAssignment(
       this.fieldName,
       ts.factory.createIdentifier(
-        `${argName}['${this.fieldName}']?.L?.map(v => ${valueConvertingOp.leftOp}v.${this.valueType.kind}${valueConvertingOp.rightOp})`,
+        `${argName}['${this.fieldName}']?.L?.map(v => ${valueConvertingOp.leftOp}v.${this.valueType.kind}${valueConvertingOp.rightOp}) || []`,
       ),
     );
   }
@@ -119,7 +119,7 @@ export class SetField implements DynamodbItemField {
     return ts.factory.createPropertyAssignment(
       this.fieldName,
       ts.factory.createIdentifier(
-        `${argName}['${this.fieldName}']?.${this.valueType.kind}S?.map(v => ${valueConvertingOp.leftOp}v${valueConvertingOp.rightOp})`,
+        `${argName}['${this.fieldName}']?.${this.valueType.kind}S?.map(v => ${valueConvertingOp.leftOp}v${valueConvertingOp.rightOp}) || new Set()`,
       ),
     );
   }
