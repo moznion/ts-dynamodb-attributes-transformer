@@ -161,7 +161,7 @@ const user: User = fromDynamodbRecord<User>({
 Then this plugin transforms the above TypeScript code like the following JavaScript code:
 
 ```js
-const record = (function (arg) {
+const user = (function (arg) {
   return {
     id: (function () {
       const numStr = arg.id.N;
