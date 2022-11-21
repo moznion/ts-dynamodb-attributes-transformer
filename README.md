@@ -1,18 +1,26 @@
 # ts-dynamodb-attributes-transformer [![.github/workflows/check.yml](https://github.com/moznion/ts-dynamodb-attributes-transformer/actions/workflows/check.yml/badge.svg)](https://github.com/moznion/ts-dynamodb-attributes-transformer/actions/workflows/check.yml) [![npm version](https://badge.fury.io/js/@moznion%2Fts-dynamodb-attributes-transformer.svg)](https://badge.fury.io/js/@moznion%2Fts-dynamodb-attributes-transformer)
 
-Code transformer plugin powered by [TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) that transforms TypeScript object to Amazon DynamoDB attributes.
+Code transformer plugin powered by [TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) that transforms TypeScript object from/to Amazon DynamoDB attributes.
 
-## How it works
+## Description
 
-This plugin replaces the TypeScript function invocation of `dynamodbRecord<T>(obj: T)` with `Record<keyof T, AttributeValue>` value that is defined in aws-sdk-js-v3 according to the type `T` and the contents of the object. In short, this plugin generates the DynamoDB attribute code for every property of type `T`.
+This plugin replaces the TypeScript function invocation with the generated object code. In short, this plugin generates the code for every property of type `T`.
+
+
+### `dynamodbRecord<T>(obj: T): Record<keyof T, AttributeValue>`
+
+This plugin replaces `dynamodbRecord<T>(obj: T)` invocation with `Record<keyof T, AttributeValue>` value that is defined in aws-sdk-js-v3 according to the type `T` and the contents of the object.
 
 This plugin powers the users can do drop-in replacements for the existing `Record<keyof T, AttributeValue>` value and/or the generator with `dynamodbRecord<T>(obj: T)` function.
 
-Manual making the translation layer between the object and DynamoDB's Record is no longer needed!
+### `fromDynamodbRecord<T>(attrs: Record<string, AttributeValue>): T`
+
+This replaces `fromDynamodbRecord<T>(attrs: Record<string, AttributeValue>)` invocation with the object which has type `T`. This method is responsible to translate the DynamoDB attributes to the actual TypeScript object, i.e. unmarshalling.
 
 ## Motivations
 
 - To do automatic generation of the [DynamoDB attribute data type](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html) code that is recognizable by [aws-sdk-js-v3](https://github.com/aws/aws-sdk-js-v3), with type safety.
+  - Manual making the translation layer between the object and DynamoDB's Record is no longer needed!
 - Performance. This uses TypeScript Compiler API, so it generates/determine the DynamoDB attribute code at the compiling timing. This means the logic doesn't have to do a reflection on the fly so this contributes to a good performance.
 
 ### Benchmark
@@ -29,6 +37,8 @@ Fastest is ts-dynamodb-attributes-transformer marshalling
 Please see also [benchmark](./examples/benchmark) project.
 
 ## Synopsis
+
+### Marshalling into DynamoDB record from the Typescript Object
 
 ```ts
 import { AttributeValue } from '@aws-sdk/client-dynamodb';
@@ -63,32 +73,32 @@ const record: Record<keyof User, AttributeValue> = dynamodbRecord<User>({
 Then this plugin transforms the above TypeScript code like the following JavaScript code:
 
 ```js
-const record = function (arg) {
-    return {
-        id: {
-            N: arg.id.toString()
-        },
-        name: {
-            S: arg.name
-        },
-        tags: {
-            M: function () {
-                var m;
-                m = {}
-                for (const kv of arg.tags) {
-                    m[kv[0]] = { S: kv[1] }
-                }
-                return m;
-            }()
+const record = (function (arg) {
+  return {
+    id: {
+      N: arg.id.toString()
+    },
+    name: {
+      S: arg.name
+    },
+    tags: {
+      M: (function () {
+        var m;
+        m = {}
+        for (const kv of arg.tags) {
+          m[kv[0]] = { S: kv[1] }
         }
-    };
-}({
-    id: 12345,
-    name: 'John Doe',
-    tags: new Map([
-        ['foo', 'bar'],
-        ['buz', 'qux'],
-    ]),
+        return m;
+      })()
+    }
+  };
+})({
+  id: 12345,
+  name: 'John Doe',
+  tags: new Map([
+    ['foo', 'bar'],
+    ['buz', 'qux'],
+  ]),
 });
 /*
  * This record is equal to the following object:
@@ -106,14 +116,98 @@ const record = function (arg) {
  */
 ```
 
+### Unmarshalling into TypeScript object from DynamoDB record
+
+```ts
+import { fromDynamodbRecord } from '@moznion/ts-dynamodb-attributes-transformer';
+
+interface User {
+  readonly id?: number;
+  readonly name?: string;
+  readonly tags: Map<string, string>;
+}
+
+const user: User = fromDynamodbRecord<User>({
+  id: {
+    N: '12345',
+  },
+  name: {
+    S: 'John Doe',
+  },
+  tags: {
+    M: {
+      foo: {
+        S: 'bar',
+      },
+      buz: {
+        S: 'qux',
+      },
+    },
+  },
+});
+```
+
+Then this plugin transforms the above TypeScript code like the following JavaScript code:
+
+```js
+const record = (function (arg) {
+  return {
+    id: (function () {
+      const numStr = arg.id.N;
+      return numStr === undefined ? undefined : Number(numStr);
+    })(),
+    name: arg.name.S,
+    tags: (function () {
+      var m, r;
+      m = new Map();
+      r = arg['tags']?.M;
+      for (const k in r) {
+        m.set(k, r[k]?.S);
+      }
+      return m;
+    })(),
+  };
+})({
+  id: {
+    N: '12345',
+  },
+  name: {
+    S: 'John Doe',
+  },
+  tags: {
+    M: {
+      foo: {
+        S: 'bar',
+      },
+      buz: {
+        S: 'qux',
+      },
+    },
+  },
+});
+
+/*
+ * This object is equal to the following:
+ *
+ *   {
+ *     id: 12345,
+ *     name: "John Doe",
+ *     tags: {
+ *       foo: { S: "bar" },
+ *       buz: { S: "qux" },
+ *     }
+ *   }
+ */
+```
+
 ## How to use this transformer
 
-This plugin exports a function that has the signature `dynamodbRecord<T extends object>(item: T): Record<keyof T, AttributeValue>`.
+This plugin exports the functions that have the signature `function dynamodbRecord<T extends object>(item: T, shouldLenientTypeCheck?: boolean): Record<keyof T, AttributeValue>` and `function fromDynamodbRecord<T extends object>(attrs: Record<string, AttributeValue>, shouldLenientTypeCheck?: boolean): T`.
 
-This function is a marker to indicate to the transformer to replace this function invocation with the generated DynamoDB record code. Therefore, there are some restrictions:
+These functions are the markers to indicate to the transformer to replace the function invocation with the generated code. Therefore, there are some restrictions:
 
 - Type parameter `T` is mandatory parameter (i.e. this mustn't be omitted). A transformer analyzes the type of the given `T` to collect the property information.
-- Type `T` must be class or interface.
+- Type `T` must be class or interface. If it needs to do unmarshalling, this type `T` must be a derived type of the **interface**.
 
 ### Examples
 
