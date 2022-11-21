@@ -187,11 +187,11 @@ NOTE: if the TypeScript property has `unknown` type and the value is `null` then
 
 ## Options
 
-### `TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK` env var (default: `<empty>`)
+### Lenient type checking (default: `false`)
 
 By default, if this plugin encounters unsupported types, it raises the error and halts the transformation.
 
-But if `TS_DYNAMODB_ATTR_TRANSFORMER_LENIENT_TYPE_CHECK` environment variable is not empty, it proceeds the transformation with ignoring the unsupported typed property even if it gets the unsupported types.
+But if `true` value is given through the second argument of the function, it proceeds the transformation with ignoring the unsupported typed property even if it gets the unsupported types.
 
 ## Note
 
